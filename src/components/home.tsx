@@ -93,6 +93,8 @@ const Home = ({ initialSignedInState = false }) => {
     },
   ]);
 
+  const [createdEvents, setCreatedEvents] = useState<any[]>([]);
+
   const handleCreateEvent = () => {
     if (
       newEvent.title &&
@@ -100,8 +102,24 @@ const Home = ({ initialSignedInState = false }) => {
       newEvent.date &&
       newEvent.description
     ) {
-      // Here you would typically send the event to your backend
-      console.log("Creating event:", newEvent);
+      // Create a new event object
+      const eventObject = {
+        id: `event-${Date.now()}`,
+        title: newEvent.title,
+        university: "Harvard University",
+        location: newEvent.location,
+        dates: newEvent.date,
+        description: newEvent.description,
+        image:
+          "https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=600&q=80",
+        type: "event" as const,
+        tags: newEvent.tags
+          ? newEvent.tags.split(",").map((tag) => tag.trim())
+          : [],
+      };
+
+      // Add to created events
+      setCreatedEvents((prev) => [...prev, eventObject]);
 
       // Reset form
       setNewEvent({
@@ -113,8 +131,8 @@ const Home = ({ initialSignedInState = false }) => {
       });
       setIsCreateEventOpen(false);
 
-      // Show success message or redirect
-      alert("Event created successfully!");
+      // Show success message
+      alert("Event created successfully and added to the timeline!");
     }
   };
 
@@ -629,7 +647,9 @@ const Home = ({ initialSignedInState = false }) => {
       <div className="container mx-auto px-4 py-8">
         {/* Main Content */}
         <div className="bg-white rounded-xl shadow-md p-6 mb-8">
-          {activeTab === "university" && <UniversityPortal />}
+          {activeTab === "university" && (
+            <UniversityPortal externalEvents={createdEvents} />
+          )}
           {activeTab === "explorer" && (
             <div>
               <OpportunityExplorer />

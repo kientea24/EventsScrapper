@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Search,
   MapPin,
@@ -37,7 +37,15 @@ interface Program {
   tags: string[];
 }
 
-const UniversityPortal = () => {
+interface UniversityPortalProps {
+  onEventCreate?: (event: Program) => void;
+  externalEvents?: Program[];
+}
+
+const UniversityPortal = ({
+  onEventCreate,
+  externalEvents = [],
+}: UniversityPortalProps = {}) => {
   const [selectedUniversity, setSelectedUniversity] =
     useState<string>("Harvard University");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -137,12 +145,55 @@ const UniversityPortal = () => {
     },
   ];
 
-  // Use default programs
-  const allPrograms = defaultPrograms;
+  // Combine default programs with external events
+  const [allPrograms, setAllPrograms] = useState<Program[]>(defaultPrograms);
+
+  useEffect(() => {
+    if (externalEvents.length > 0) {
+      setAllPrograms((prev) => [...prev, ...externalEvents]);
+    }
+  }, [externalEvents]);
+
+  // Helper function to parse dates for sorting
+  const parseEventDate = (dateString: string) => {
+    // Handle different date formats
+    if (dateString.includes("-")) {
+      // Format like "April 15-17, 2023" or "March 10-12, 2023"
+      const parts = dateString.split(",");
+      if (parts.length === 2) {
+        const year = parts[1].trim();
+        const monthDay = parts[0].trim();
+        const monthName = monthDay.split(" ")[0];
+        const day = monthDay.split(" ")[1].split("-")[0];
+        return new Date(`${monthName} ${day}, ${year}`);
+      }
+    }
+
+    // Handle formats like "Fall 2023", "Spring 2023", "Summer 2023"
+    if (dateString.includes("Fall")) {
+      const year = dateString.split(" ")[1];
+      return new Date(`September 1, ${year}`);
+    }
+    if (dateString.includes("Spring")) {
+      const year = dateString.split(" ")[1];
+      return new Date(`January 1, ${year}`);
+    }
+    if (dateString.includes("Summer")) {
+      const year = dateString.split(" ")[1];
+      return new Date(`June 1, ${year}`);
+    }
+    if (dateString.includes("Year-round")) {
+      return new Date(); // Current date for year-round programs
+    }
+
+    // Try to parse as a regular date
+    const parsed = new Date(dateString);
+    return isNaN(parsed.getTime()) ? new Date() : parsed;
+  };
 
   // Filter programs based on selected university and tab
   const filterPrograms = (type: "study" | "research" | "event") => {
-    return allPrograms
+    const filtered = allPrograms
       .filter(
         (program) =>
           program.university === selectedUniversity && program.type === type,
@@ -159,6 +210,17 @@ const UniversityPortal = () => {
             tag.toLowerCase().includes(searchQuery.toLowerCase()),
           ),
       );
+
+    // Sort events by date (earliest first)
+    if (type === "event") {
+      return filtered.sort((a, b) => {
+        const dateA = parseEventDate(a.dates);
+        const dateB = parseEventDate(b.dates);
+        return dateA.getTime() - dateB.getTime();
+      });
+    }
+
+    return filtered;
   };
 
   const studyAbroads = filterPrograms("study");
@@ -360,6 +422,18 @@ const UniversityPortal = () => {
                           key={program.id}
                           program={program}
                           isLast={index === campusEvents.length - 1}
+                          onEdit={(updatedProgram) => {
+                            setAllPrograms((prev) =>
+                              prev.map((p) =>
+                                p.id === updatedProgram.id ? updatedProgram : p,
+                              ),
+                            );
+                          }}
+                          onDelete={(programId) => {
+                            setAllPrograms((prev) =>
+                              prev.filter((p) => p.id !== programId),
+                            );
+                          }}
                         />
                       ))}
                     </div>
@@ -571,9 +645,31 @@ const EventCard = ({ program }: EventCardProps) => {
 interface TimelineEventCardProps {
   program: Program;
   isLast: boolean;
+  onEdit?: (program: Program) => void;
+  onDelete?: (programId: string) => void;
 }
 
-const TimelineEventCard = ({ program, isLast }: TimelineEventCardProps) => {
+const TimelineEventCard = ({
+  program,
+  isLast,
+  onEdit,
+  onDelete,
+}: TimelineEventCardProps) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedProgram, setEditedProgram] = useState(program);
+
+  const handleSave = () => {
+    if (onEdit) {
+      onEdit(editedProgram);
+    }
+    setIsEditing(false);
+  };
+
+  const handleDelete = () => {
+    if (onDelete && confirm("Are you sure you want to delete this event?")) {
+      onDelete(program.id);
+    }
+  };
   return (
     <div className="relative flex items-start space-x-6 pb-8">
       {/* Timeline dot */}
@@ -600,39 +696,143 @@ const TimelineEventCard = ({ program, isLast }: TimelineEventCardProps) => {
             <div className="flex-1 p-4">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 text-lg mb-1">
-                    {program.title}
-                  </h4>
-                  <div className="flex items-center text-sm text-gray-600 mb-2">
-                    <Calendar className="h-4 w-4 mr-1" />
-                    <span className="font-medium text-purple-600">
-                      {program.dates}
-                    </span>
-                    <span className="mx-2">•</span>
-                    <MapPin className="h-4 w-4 mr-1" />
-                    <span>{program.location}</span>
-                  </div>
-                  <p className="text-sm text-gray-700 mb-3 line-clamp-2">
-                    {program.description}
-                  </p>
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {program.tags.slice(0, 3).map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant="outline"
-                        className="text-xs bg-purple-50 text-purple-700 border-purple-200"
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
+                  {isEditing ? (
+                    <div className="space-y-3">
+                      <Input
+                        value={editedProgram.title}
+                        onChange={(e) =>
+                          setEditedProgram({
+                            ...editedProgram,
+                            title: e.target.value,
+                          })
+                        }
+                        className="font-semibold text-lg"
+                      />
+                      <div className="flex gap-2">
+                        <Input
+                          value={editedProgram.dates}
+                          onChange={(e) =>
+                            setEditedProgram({
+                              ...editedProgram,
+                              dates: e.target.value,
+                            })
+                          }
+                          placeholder="Date"
+                          className="flex-1"
+                        />
+                        <Input
+                          value={editedProgram.location}
+                          onChange={(e) =>
+                            setEditedProgram({
+                              ...editedProgram,
+                              location: e.target.value,
+                            })
+                          }
+                          placeholder="Location"
+                          className="flex-1"
+                        />
+                      </div>
+                      <textarea
+                        value={editedProgram.description}
+                        onChange={(e) =>
+                          setEditedProgram({
+                            ...editedProgram,
+                            description: e.target.value,
+                          })
+                        }
+                        className="w-full p-2 border rounded text-sm"
+                        rows={2}
+                      />
+                      <Input
+                        value={editedProgram.tags.join(", ")}
+                        onChange={(e) =>
+                          setEditedProgram({
+                            ...editedProgram,
+                            tags: e.target.value
+                              .split(", ")
+                              .filter((t) => t.trim()),
+                          })
+                        }
+                        placeholder="Tags (comma separated)"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={handleSave}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setIsEditing(false)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <h4 className="font-semibold text-gray-900 text-lg mb-1">
+                        {program.title}
+                      </h4>
+                      <div className="flex items-center text-sm text-gray-600 mb-2">
+                        <Calendar className="h-4 w-4 mr-1" />
+                        <span className="font-medium text-purple-600">
+                          {program.dates}
+                        </span>
+                        <span className="mx-2">•</span>
+                        <MapPin className="h-4 w-4 mr-1" />
+                        <span>{program.location}</span>
+                      </div>
+                      <p className="text-sm text-gray-700 mb-3 line-clamp-2">
+                        {program.description}
+                      </p>
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {program.tags.slice(0, 3).map((tag) => (
+                          <Badge
+                            key={tag}
+                            variant="outline"
+                            className="text-xs bg-purple-50 text-purple-700 border-purple-200"
+                          >
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
-                <Button
-                  size="sm"
-                  className="ml-4 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white"
-                >
-                  Register
-                </Button>
+                <div className="ml-4 flex flex-col gap-2">
+                  {!isEditing && (
+                    <>
+                      <Button
+                        size="sm"
+                        className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white"
+                      >
+                        Register
+                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setIsEditing(true)}
+                          className="text-xs px-2"
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleDelete}
+                          className="text-xs px-2 text-red-600 hover:text-red-700"
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
