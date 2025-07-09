@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-07-09T09:42:04.245Z",
+  "humanReadable": "Wednesday, July 9, 2025 at 05:42 PM GMT+8",
+  "totalEvents": 358,
+  "sources": {
+    "gazette": 411,
+    "engage": 20
+  },
+  "dateRange": {
+    "from": "Wednesday, July 9, 2025",
+    "to": "Ongoing"
+  }
+}

@@ -1,0 +1,200 @@
+{
+  "universities": {
+    "harvard": {
+      "name": "Harvard University",
+      "domain": "engage.gsas.harvard.edu",
+      "apiEndpoint": "https://engage.gsas.harvard.edu/api/discovery/event/search",
+      "eventsUrl": "https://engage.gsas.harvard.edu/events",
+      "source": "Harvard Engage",
+      "tags": ["Harvard Engage", "Harvard"],
+      "defaultImage": "https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=600&q=80",
+      "customSelectors": {
+        "eventContainer": [".event-item", ".event-card", ".event", "[data-testid=\"event\"]"],
+        "title": ["h1", "h2", "h3", ".event-title", ".title"],
+        "date": [".date", ".event-date", "time"],
+        "location": [".location", ".event-location", "address"],
+        "description": [".description", ".event-description", "p"],
+        "image": ["img[src*=\"event\"]", ".event-image img"],
+        "link": ["a[href*=\"event\"]", ".event-link a"]
+      }
+    },
+    "mit": {
+      "name": "MIT",
+      "domain": "engage.mit.edu",
+      "apiEndpoint": "https://engage.mit.edu/api/discovery/event/search",
+      "eventsUrl": "https://engage.mit.edu/events",
+      "source": "MIT Engage",
+      "tags": ["MIT Engage", "MIT"],
+      "defaultImage": "https://images.unsplash.com/photo-1562774053-701939374585?w=600&q=80",
+      "customSelectors": {
+        "eventContainer": [".event-item", ".event-card", ".event", "[data-testid=\"event\"]"],
+        "title": ["h1", "h2", "h3", ".event-title", ".title"],
+        "date": [".date", ".event-date", "time"],
+        "location": [".location", ".event-location", "address"],
+        "description": [".description", ".event-description", "p"],
+        "image": ["img[src*=\"event\"]", ".event-image img"],
+        "link": ["a[href*=\"event\"]", ".event-link a"]
+      }
+    },
+    "stanford": {
+      "name": "Stanford University",
+      "domain": "engage.stanford.edu",
+      "apiEndpoint": "https://engage.stanford.edu/api/discovery/event/search",
+      "eventsUrl": "https://engage.stanford.edu/events",
+      "source": "Stanford Engage",
+      "tags": ["Stanford Engage", "Stanford"],
+      "defaultImage": "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=600&q=80",
+      "customSelectors": {
+        "eventContainer": [".event-item", ".event-card", ".event", "[data-testid=\"event\"]"],
+        "title": ["h1", "h2", "h3", ".event-title", ".title"],
+        "date": [".date", ".event-date", "time"],
+        "location": [".location", ".event-location", "address"],
+        "description": [".description", ".event-description", "p"],
+        "image": ["img[src*=\"event\"]", ".event-image img"],
+        "link": ["a[href*=\"event\"]", ".event-link a"]
+      }
+    },
+    "yale": {
+      "name": "Yale University",
+      "domain": "engage.yale.edu",
+      "apiEndpoint": "https://engage.yale.edu/api/discovery/event/search",
+      "eventsUrl": "https://engage.yale.edu/events",
+      "source": "Yale Engage",
+      "tags": ["Yale Engage", "Yale"],
+      "defaultImage": "https://images.unsplash.com/photo-1562774053-701939374585?w=600&q=80",
+      "customSelectors": {
+        "eventContainer": [".event-item", ".event-card", ".event", "[data-testid=\"event\"]"],
+        "title": ["h1", "h2", "h3", ".event-title", ".title"],
+        "date": [".date", ".event-date", "time"],
+        "location": [".location", ".event-location", "address"],
+        "description": [".description", ".event-description", "p"],
+        "image": ["img[src*=\"event\"]", ".event-image img"],
+        "link": ["a[href*=\"event\"]", ".event-link a"]
+      }
+    },
+    "princeton": {
+      "name": "Princeton University",
+      "domain": "engage.princeton.edu",
+      "apiEndpoint": "https://engage.princeton.edu/api/discovery/event/search",
+      "eventsUrl": "https://engage.princeton.edu/events",
+      "source": "Princeton Engage",
+      "tags": ["Princeton Engage", "Princeton"],
+      "defaultImage": "https://images.unsplash.com/photo-1562774053-701939374585?w=600&q=80",
+      "customSelectors": {
+        "eventContainer": [".event-item", ".event-card", ".event", "[data-testid=\"event\"]"],
+        "title": ["h1", "h2", "h3", ".event-title", ".title"],
+        "date": [".date", ".event-date", "time"],
+        "location": [".location", ".event-location", "address"],
+        "description": [".description", ".event-description", "p"],
+        "image": ["img[src*=\"event\"]", ".event-image img"],
+        "link": ["a[href*=\"event\"]", ".event-link a"]
+      }
+    },
+    "columbia": {
+      "name": "Columbia University",
+      "domain": "engage.columbia.edu",
+      "apiEndpoint": "https://engage.columbia.edu/api/discovery/event/search",
+      "eventsUrl": "https://engage.columbia.edu/events",
+      "source": "Columbia Engage",
+      "tags": ["Columbia Engage", "Columbia"],
+      "defaultImage": "https://images.unsplash.com/photo-1562774053-701939374585?w=600&q=80",
+      "customSelectors": {
+        "eventContainer": [".event-item", ".event-card", ".event", "[data-testid=\"event\"]"],
+        "title": ["h1", "h2", "h3", ".event-title", ".title"],
+        "date": [".date", ".event-date", "time"],
+        "location": [".location", ".event-location", "address"],
+        "description": [".description", ".event-description", "p"],
+        "image": ["img[src*=\"event\"]", ".event-image img"],
+        "link": ["a[href*=\"event\"]", ".event-link a"]
+      }
+    },
+    "berkeley": {
+      "name": "UC Berkeley",
+      "domain": "engage.berkeley.edu",
+      "apiEndpoint": "https://engage.berkeley.edu/api/discovery/event/search",
+      "eventsUrl": "https://engage.berkeley.edu/events",
+      "source": "Berkeley Engage",
+      "tags": ["Berkeley Engage", "UC Berkeley"],
+      "defaultImage": "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=600&q=80",
+      "customSelectors": {
+        "eventContainer": [".event-item", ".event-card", ".event", "[data-testid=\"event\"]"],
+        "title": ["h1", "h2", "h3", ".event-title", ".title"],
+        "date": [".date", ".event-date", "time"],
+        "location": [".location", ".event-location", "address"],
+        "description": [".description", ".event-description", "p"],
+        "image": ["img[src*=\"event\"]", ".event-image img"],
+        "link": ["a[href*=\"event\"]", ".event-link a"]
+      }
+    },
+    "chicago": {
+      "name": "University of Chicago",
+      "domain": "engage.uchicago.edu",
+      "apiEndpoint": "https://engage.uchicago.edu/api/discovery/event/search",
+      "eventsUrl": "https://engage.uchicago.edu/events",
+      "source": "Chicago Engage",
+      "tags": ["Chicago Engage", "UChicago"],
+      "defaultImage": "https://images.unsplash.com/photo-1562774053-701939374585?w=600&q=80",
+      "customSelectors": {
+        "eventContainer": [".event-item", ".event-card", ".event", "[data-testid=\"event\"]"],
+        "title": ["h1", "h2", "h3", ".event-title", ".title"],
+        "date": [".date", ".event-date", "time"],
+        "location": [".location", ".event-location", "address"],
+        "description": [".description", ".event-description", "p"],
+        "image": ["img[src*=\"event\"]", ".event-image img"],
+        "link": ["a[href*=\"event\"]", ".event-link a"]
+      }
+    },
+    "nyu": {
+      "name": "New York University",
+      "domain": "engage.nyu.edu",
+      "apiEndpoint": "https://engage.nyu.edu/api/discovery/event/search",
+      "eventsUrl": "https://engage.nyu.edu/events",
+      "source": "NYU Engage",
+      "tags": ["NYU Engage", "NYU"],
+      "defaultImage": "https://images.unsplash.com/photo-1562774053-701939374585?w=600&q=80",
+      "customSelectors": {
+        "eventContainer": [".event-item", ".event-card", ".event", "[data-testid=\"event\"]"],
+        "title": ["h1", "h2", "h3", ".event-title", ".title"],
+        "date": [".date", ".event-date", "time"],
+        "location": [".location", ".event-location", "address"],
+        "description": [".description", ".event-description", "p"],
+        "image": ["img[src*=\"event\"]", ".event-image img"],
+        "link": ["a[href*=\"event\"]", ".event-link a"]
+      }
+    },
+    "usc": {
+      "name": "University of Southern California",
+      "domain": "engage.usc.edu",
+      "apiEndpoint": "https://engage.usc.edu/api/discovery/event/search",
+      "eventsUrl": "https://engage.usc.edu/events",
+      "source": "USC Engage",
+      "tags": ["USC Engage", "USC"],
+      "defaultImage": "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=600&q=80",
+      "customSelectors": {
+        "eventContainer": [".event-item", ".event-card", ".event", "[data-testid=\"event\"]"],
+        "title": ["h1", "h2", "h3", ".event-title", ".title"],
+        "date": [".date", ".event-date", "time"],
+        "location": [".location", ".event-location", "address"],
+        "description": [".description", ".event-description", "p"],
+        "image": ["img[src*=\"event\"]", ".event-image img"],
+        "link": ["a[href*=\"event\"]", ".event-link a"]
+      }
+    }
+  },
+  "defaultSelectors": {
+    "eventContainer": [".event-item", ".event-card", ".event", "[data-testid=\"event\"]", ".card", "article"],
+    "title": ["h1", "h2", "h3", ".event-title", ".title"],
+    "date": [".date", ".event-date", "time"],
+    "location": [".location", ".event-location", "address"],
+    "description": [".description", ".event-description", "p"],
+    "image": ["img[src*=\"event\"]", ".event-image img"],
+    "link": ["a[href*=\"event\"]", ".event-link a"]
+  },
+  "scrapingSettings": {
+    "maxRetries": 3,
+    "delayBetweenPages": 5000,
+    "delayBetweenUniversities": 10000,
+    "maxPages": 5,
+    "timeout": 45000
+  }
+} 

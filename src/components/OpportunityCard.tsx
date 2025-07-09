@@ -44,6 +44,7 @@ const OpportunityCard = ({
 }: OpportunityCardProps) => {
   // Use opportunity prop if provided, otherwise use individual props
   const cardData = opportunity || {
+    id: "1", // Default ID for fallback
     title,
     description,
     imageUrl,

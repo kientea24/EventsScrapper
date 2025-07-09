@@ -29,6 +29,9 @@ import OpportunityExplorer from "./OpportunityExplorer";
 import UniversityPortal from "./UniversityPortal";
 import PersonalDashboard from "./PersonalDashboard";
 
+// Import the parsed Harvard events
+import harvardEventsData from "../../harvard/events/all-harvard-events.json";
+
 const Home = ({ initialSignedInState = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -94,6 +97,88 @@ const Home = ({ initialSignedInState = false }) => {
   ]);
 
   const [createdEvents, setCreatedEvents] = useState<any[]>([]);
+
+  // Transform Harvard events data to match the Program interface
+  const transformHarvardEvents = () => {
+    // Helper to extract time from description (for Gazette)
+    function extractTimeFromDescription(description) {
+      if (!description) return null;
+      // Try to match time ranges first (e.g., 9am – 5pm, 7:30pm - 9pm, etc.)
+      const rangePatterns = [
+        /(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\s*[–—-]\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i,
+        /(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\s+to\s+(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i
+      ];
+      for (const pattern of rangePatterns) {
+        const match = description.match(pattern);
+        if (match) {
+          return `${match[1].trim()} – ${match[2].trim()}`;
+        }
+      }
+      // Single time (e.g., 7pm, 9:30am)
+      const singlePattern = /(\d{1,2}(?::\d{2})?\s*(?:am|pm))/i;
+      const singleMatch = description.match(singlePattern);
+      if (singleMatch) {
+        return singleMatch[1].trim();
+      }
+      return null;
+    }
+
+    // Helper to extract time from Engage dates field
+    function extractTimeFromDates(dates) {
+      if (!dates) return null;
+      // e.g., "Thursday, July 10 at 9:00AM EDT"
+      const match = dates.match(/at\s+(\d{1,2}:\d{2}\s*[AP]M)/i);
+      if (match) {
+        return match[1].replace(/\s+/, '').toLowerCase();
+      }
+      // e.g., "9am", "7pm", "9:30am"
+      const altMatch = dates.match(/(\d{1,2}(?::\d{2})?\s*(?:am|pm))/i);
+      if (altMatch) {
+        return altMatch[1].trim();
+      }
+      return null;
+    }
+
+    return harvardEventsData.map((event, index) => {
+      let time = null;
+      if (event.source && event.source.toLowerCase().includes('gazette')) {
+        time = extractTimeFromDescription(event.description);
+      } else if (event.source && event.source.toLowerCase().includes('engage')) {
+        time = extractTimeFromDates(event.dates);
+      } else {
+        // fallback: try both
+        time = extractTimeFromDates(event.dates) || extractTimeFromDescription(event.description);
+      }
+      return {
+        id: event.id || `harvard-${index}`,
+        title: event.title || "Untitled Event",
+        university: event.university || "Harvard University",
+        location: event.location || "Location TBD",
+        dates: event.dates || "Date TBD",
+        description: event.description || "No description available",
+        image: event.image || "https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=600&q=80",
+        type: (event.type as "event") || "event",
+        tags: event.tags || [],
+        link: event.link,
+        weblink: event.weblink,
+        organization: event.organization,
+        source: event.source,
+        time // <-- new field
+      };
+    });
+  };
+
+  // Load Harvard events as external events
+  useEffect(() => {
+    try {
+      const harvardEvents = transformHarvardEvents();
+      console.log(`Loaded ${harvardEvents.length} Harvard events`);
+      setCreatedEvents(harvardEvents);
+    } catch (error) {
+      console.error('Error loading Harvard events:', error);
+      setCreatedEvents([]);
+    }
+  }, []);
 
   const handleCreateEvent = () => {
     if (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Search,
   MapPin,
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+// Removed Select imports since we're using native select
 import {
   Card,
   CardContent,
@@ -35,6 +36,12 @@ interface Program {
   image: string;
   type: "study" | "research" | "event";
   tags: string[];
+  link?: string;
+  weblink?: string;
+  cost?: string;
+  organization?: string;
+  source?: string;
+  time?: string; // Added time field
 }
 
 interface UniversityPortalProps {
@@ -51,6 +58,7 @@ const UniversityPortal = ({
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
+  const [selectedSources, setSelectedSources] = useState<string[]>([]);
 
   // Mock data for university programs
   const universities = [
@@ -92,19 +100,6 @@ const UniversityPortal = ({
       tags: ["Science", "Environmental", "Field Work"],
     },
     {
-      id: "3",
-      title: "Global Leadership Summit",
-      university: "Harvard University",
-      location: "Cambridge, MA",
-      dates: "April 15-17, 2023",
-      description:
-        "Connect with industry leaders and fellow students at this annual leadership conference.",
-      image:
-        "https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=600&q=80",
-      type: "event",
-      tags: ["Networking", "Leadership", "Career"],
-    },
-    {
       id: "4",
       title: "Tokyo Tech Exchange",
       university: "Harvard University",
@@ -130,27 +125,19 @@ const UniversityPortal = ({
       type: "research",
       tags: ["Environmental", "Data Science", "Global"],
     },
-    {
-      id: "6",
-      title: "Entrepreneurship Hackathon",
-      university: "Harvard University",
-      location: "Cambridge, MA",
-      dates: "March 10-12, 2023",
-      description:
-        "A 48-hour innovation challenge to develop and pitch startup ideas with mentorship from industry experts.",
-      image:
-        "https://images.unsplash.com/photo-1531482615713-2afd69097998?w=600&q=80",
-      type: "event",
-      tags: ["Entrepreneurship", "Innovation", "Competition"],
-    },
   ];
 
   // Combine default programs with external events
   const [allPrograms, setAllPrograms] = useState<Program[]>(defaultPrograms);
 
   useEffect(() => {
-    if (externalEvents.length > 0) {
-      setAllPrograms((prev) => [...prev, ...externalEvents]);
+    try {
+      if (externalEvents.length > 0) {
+        console.log(`Adding ${externalEvents.length} external events to portal`);
+        setAllPrograms((prev) => [...prev, ...externalEvents]);
+      }
+    } catch (error) {
+      console.error('Error setting external events:', error);
     }
   }, [externalEvents]);
 
@@ -193,6 +180,10 @@ const UniversityPortal = ({
 
   // Filter programs based on selected university and tab
   const filterPrograms = (type: "study" | "research" | "event") => {
+    console.log(`Filtering programs for type: ${type}, university: ${selectedUniversity}`);
+    console.log(`Total programs: ${allPrograms.length}`);
+    console.log(`Selected sources: ${selectedSources}`);
+    
     const filtered = allPrograms
       .filter(
         (program) =>
@@ -209,7 +200,32 @@ const UniversityPortal = ({
           program.tags.some((tag) =>
             tag.toLowerCase().includes(searchQuery.toLowerCase()),
           ),
-      );
+      )
+      .filter((program) => {
+        // Add debugging to see what's happening
+        console.log(`Filtering event: "${program.title}" (source: "${program.source}")`);
+        console.log(`Selected sources: [${selectedSources.join(', ')}]`);
+        
+        if (selectedSources.length === 0 || selectedSources.length === 2) {
+          // No filters or both checked: show all
+          console.log(`  -> Including (no filter or both checked)`);
+          return true;
+        }
+        
+        // Only one checked: show only that source
+        const hasMatchingSource = program.source && selectedSources.includes(program.source);
+        console.log(`  -> Including: ${hasMatchingSource} (source match: ${hasMatchingSource})`);
+        return hasMatchingSource;
+      });
+
+    console.log(`Filtered programs: ${filtered.length}`);
+    if (selectedSources.length > 0) {
+      const sourceCounts = filtered.reduce((acc, program) => {
+        acc[program.source || 'unknown'] = (acc[program.source || 'unknown'] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      console.log('Source breakdown:', sourceCounts);
+    }
 
     // Sort events by date (earliest first)
     if (type === "event") {
@@ -262,6 +278,168 @@ const UniversityPortal = ({
       return newDate;
     });
   };
+
+  // Helper to normalize event date to YYYY-MM-DD
+  const normalizeEventDate = (dateString: string) => {
+    // Handle Harvard Engage format: "Thursday, July 10 at 9:00AM EDT"
+    const engageMatch = dateString.match(/([A-Za-z]+,\s*[A-Za-z]+\s+\d{1,2})\s+at\s+\d{1,2}:\d{2}[AP]M\s+[A-Z]+/);
+    if (engageMatch) {
+      const datePart = engageMatch[1]; // "Thursday, July 10"
+      const monthDayMatch = datePart.match(/([A-Za-z]+)\s+(\d{1,2})/);
+      if (monthDayMatch) {
+        const [, month, day] = monthDayMatch;
+        // Use current year for Harvard Engage events
+        const year = new Date().getFullYear();
+        const date = new Date(Date.UTC(year, getMonthIndex(month), parseInt(day)));
+        return date.toISOString().slice(0, 10);
+      }
+    }
+    
+    // Handle "Month Day, Year" format (e.g., "July 3, 2025")
+    const monthDayYearMatch = dateString.match(/(\w+) (\d{1,2}), (\d{4})/);
+    if (monthDayYearMatch) {
+      const [, month, day, year] = monthDayYearMatch;
+      // Create date in UTC to avoid timezone issues
+      const date = new Date(Date.UTC(parseInt(year), getMonthIndex(month), parseInt(day)));
+      return date.toISOString().slice(0, 10);
+    }
+    
+    // Handle "Month Day Year" format (e.g., "July 3 2025")
+    const monthDayYearNoCommaMatch = dateString.match(/(\w+) (\d{1,2}) (\d{4})/);
+    if (monthDayYearNoCommaMatch) {
+      const [, month, day, year] = monthDayYearNoCommaMatch;
+      // Create date in UTC to avoid timezone issues
+      const date = new Date(Date.UTC(parseInt(year), getMonthIndex(month), parseInt(day)));
+      return date.toISOString().slice(0, 10);
+    }
+    
+    // Try to parse as a regular date
+    const parsed = new Date(dateString);
+    if (!isNaN(parsed.getTime())) {
+      return parsed.toISOString().slice(0, 10);
+    }
+    
+    // Fallback: use today
+    return new Date().toISOString().slice(0, 10);
+  };
+
+  // Helper function to get month index
+  const getMonthIndex = (monthName: string) => {
+    const months = [
+      'january', 'february', 'march', 'april', 'may', 'june',
+      'july', 'august', 'september', 'october', 'november', 'december'
+    ];
+    return months.indexOf(monthName.toLowerCase());
+  };
+
+  // Group events by normalized date
+  const groupEventsByDay = (events: Program[]) => {
+    const grouped: { [date: string]: Program[] } = {};
+    events.forEach((event) => {
+      const day = normalizeEventDate(event.dates);
+      if (!grouped[day]) grouped[day] = [];
+      grouped[day].push(event);
+    });
+    // Sort keys chronologically
+    const sortedKeys = Object.keys(grouped).sort();
+    return { grouped, sortedKeys };
+  };
+
+  // Infinite scroll state
+  const [daysToShow, setDaysToShow] = useState(7);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  // Calendar day selection state
+  const [selectedCalendarDay, setSelectedCalendarDay] = useState<string | null>(null);
+
+  // Helper to create a strict deduplication key for an event
+  const getEventDedupKey = (event: Program) => {
+    return [
+      (event.title || '').trim().toLowerCase(),
+      normalizeEventDate(event.dates),
+      (event.location || '').trim().toLowerCase(),
+    ].join('|');
+  };
+
+  // Deduplicate events by strict key (title|date|location)
+  const deduplicateEvents = (events: Program[]) => {
+    const seen = new Set<string>();
+    return events.filter(event => {
+      const key = getEventDedupKey(event);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
+  // Filter events by source first
+  const filteredEvents = campusEvents
+    .filter((program) => {
+      if (selectedSources.length === 0 || selectedSources.length === 2) {
+        // No filters or both checked: show all
+        return true;
+      }
+      
+      // Only one checked: show only that source
+      return program.source && selectedSources.includes(program.source);
+    });
+
+  // Apply frontend deduplication before grouping
+  const dedupedFilteredEvents = deduplicateEvents(filteredEvents);
+
+  // Group filtered events by day
+  const { grouped, sortedKeys } = groupEventsByDay(dedupedFilteredEvents);
+
+  // Filter events based on selected calendar day
+  const getFilteredEvents = () => {
+    if (!selectedCalendarDay) {
+      return sortedKeys.slice(0, daysToShow);
+    }
+    return sortedKeys.filter(day => day === selectedCalendarDay);
+  };
+
+  const filteredEventDays = getFilteredEvents();
+
+  // Infinite scroll: load more days when bottom is reached
+  const handleLoadMore = useCallback(() => {
+    if (selectedCalendarDay) return; // Don't load more when filtering
+    setDaysToShow((prev) => Math.min(prev + 1, sortedKeys.length));
+  }, [sortedKeys.length, selectedCalendarDay]);
+
+  // Handle calendar day click
+  const handleCalendarDayClick = (day: string) => {
+    if (selectedCalendarDay === day) {
+      setSelectedCalendarDay(null); // Unfilter
+    } else {
+      setSelectedCalendarDay(day); // Filter to this day
+    }
+  };
+
+  // Check if a calendar day has events
+  const hasEventsOnDay = (day: string) => {
+    return sortedKeys.includes(day);
+  };
+
+  // Get events for a specific calendar day
+  const getEventsForCalendarDay = (day: string) => {
+    return grouped[day] || [];
+  };
+
+  useEffect(() => {
+    if (!loadMoreRef.current) return;
+    const observer = new window.IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        handleLoadMore();
+      }
+    });
+    observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [handleLoadMore]);
+
+  // Add error boundary
+  if (!allPrograms || allPrograms.length === 0) {
+    console.log('No programs available');
+  }
 
   return (
     <div className="w-full bg-white min-h-screen">
@@ -414,28 +592,62 @@ const UniversityPortal = ({
               <TabsContent value="events" className="mt-0">
                 {campusEvents.length > 0 ? (
                   <div className="relative">
-                    {/* Timeline line */}
-                    <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-purple-500 to-pink-500"></div>
-                    <div className="space-y-8">
-                      {campusEvents.map((program, index) => (
-                        <TimelineEventCard
-                          key={program.id}
-                          program={program}
-                          isLast={index === campusEvents.length - 1}
-                          onEdit={(updatedProgram) => {
-                            setAllPrograms((prev) =>
-                              prev.map((p) =>
-                                p.id === updatedProgram.id ? updatedProgram : p,
-                              ),
-                            );
+                    {/* Source filter checkboxes */}
+                    <div className="mb-6 flex items-center gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedSources.includes("Harvard Gazette")}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedSources(prev => [...prev, "Harvard Gazette"]);
+                            } else {
+                              setSelectedSources(prev => prev.filter(s => s !== "Harvard Gazette"));
+                            }
                           }}
-                          onDelete={(programId) => {
-                            setAllPrograms((prev) =>
-                              prev.filter((p) => p.id !== programId),
-                            );
-                          }}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                         />
+                        <span className="text-sm text-gray-700">Harvard Gazette</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedSources.includes("Harvard Engage")}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedSources(prev => [...prev, "Harvard Engage"]);
+                            } else {
+                              setSelectedSources(prev => prev.filter(s => s !== "Harvard Engage"));
+                            }
+                          }}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-700">Harvard Engage</span>
+                      </label>
+                    </div>
+                    
+                    {/* Timeline line - moved down to avoid overlap with filters */}
+                    <div className="absolute left-6 top-16 bottom-0 w-0.5 bg-gradient-to-b from-purple-500 to-pink-500"></div>
+                    <div className="space-y-12" key={`events-${selectedSources.join('-')}`}>
+                      {filteredEventDays.map((day, idx) => (
+                        <div key={day} className="space-y-8">
+                          <div className="flex items-center gap-2 mb-2 ml-16 mt-8">
+                            <span className="text-lg font-bold text-purple-700">
+                              {new Date(day).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                            </span>
+                            <Badge className="bg-purple-100 text-purple-700">{grouped[day].length} event{grouped[day].length > 1 ? 's' : ''}</Badge>
+                          </div>
+                          {renderDayEvents(grouped[day])}
+                        </div>
                       ))}
+                      {/* Infinite scroll loader */}
+                      {!selectedCalendarDay && daysToShow < sortedKeys.length && (
+                        <div ref={loadMoreRef} className="flex justify-center py-8">
+                          <Button variant="outline" disabled>
+                            Loading more days...
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -474,18 +686,17 @@ const UniversityPortal = ({
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="pt-0">
-                <div className="grid grid-cols-7 gap-1 mb-2">
+              <CardContent className="pb-4">
+                {/* Calendar grid */}
+                <div className="grid grid-cols-7 gap-1 text-xs">
                   {["S", "M", "T", "W", "T", "F", "S"].map((day) => (
                     <div
                       key={day}
-                      className="text-center text-xs font-medium text-gray-400 py-2"
+                      className="h-8 flex items-center justify-center text-gray-500 font-medium"
                     >
                       {day}
                     </div>
                   ))}
-                </div>
-                <div className="grid grid-cols-7 gap-1">
                   {Array.from({ length: getFirstDayOfMonth(currentMonth) }).map(
                     (_, index) => (
                       <div key={`empty-${index}`} className="h-8"></div>
@@ -494,26 +705,34 @@ const UniversityPortal = ({
                   {Array.from({ length: getDaysInMonth(currentMonth) }).map(
                     (_, index) => {
                       const day = index + 1;
-                      const isToday =
-                        new Date().getDate() === day &&
-                        new Date().getMonth() === currentMonth.getMonth() &&
-                        new Date().getFullYear() === currentMonth.getFullYear();
-                      const isSelected = selectedDate === day;
+                      const dateString = `${currentMonth.getFullYear()}-${String(
+                        currentMonth.getMonth() + 1,
+                      ).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                      const hasEvents = hasEventsOnDay(dateString);
+                      const isSelected = selectedCalendarDay === dateString;
+                      const isToday = dateString === new Date().toISOString().slice(0, 10);
 
                       return (
-                        <button
+                        <Button
                           key={day}
-                          onClick={() => setSelectedDate(day)}
-                          className={`h-8 w-8 text-sm rounded transition-colors ${
-                            isToday
-                              ? "bg-blue-600 text-white"
-                              : isSelected
-                                ? "bg-purple-100 text-purple-700"
-                                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                          size="sm"
+                          variant="ghost"
+                          className={`h-8 w-8 p-0 text-xs relative ${
+                            isSelected
+                              ? "bg-purple-600 text-white hover:bg-purple-700"
+                              : hasEvents
+                              ? "bg-purple-100 text-purple-700 hover:bg-purple-200"
+                              : isToday
+                              ? "bg-gray-100 text-gray-900 hover:bg-gray-200"
+                              : "text-gray-700 hover:bg-gray-100"
                           }`}
+                          onClick={() => handleCalendarDayClick(dateString)}
                         >
                           {day}
-                        </button>
+                          {hasEvents && !isSelected && (
+                            <div className="absolute -top-1 -right-1 h-2 w-2 bg-purple-500 rounded-full"></div>
+                          )}
+                        </Button>
                       );
                     },
                   )}
@@ -521,15 +740,56 @@ const UniversityPortal = ({
               </CardContent>
             </Card>
 
-            {/* Upcoming/Past Toggle */}
-            <div className="flex rounded-lg bg-gray-100 p-1">
-              <button className="flex-1 py-2 px-3 text-sm font-medium rounded-md bg-white text-gray-900 shadow-sm transition-colors">
-                Upcoming
-              </button>
-              <button className="flex-1 py-2 px-3 text-sm font-medium rounded-md text-gray-600 hover:text-gray-900 transition-colors">
-                Past
-              </button>
-            </div>
+            {/* Selected Day Info */}
+            {selectedCalendarDay && (
+              <Card className="bg-white border-gray-200">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {new Date(selectedCalendarDay).toLocaleDateString(undefined, { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}
+                    </h3>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSelectedCalendarDay(null)}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      ×
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {getEventsForCalendarDay(selectedCalendarDay).map((event) => (
+                      <div key={event.id} className="p-3 bg-gray-50 rounded-lg">
+                        <h4 className="font-medium text-gray-900 text-sm mb-1">
+                          {event.title}
+                        </h4>
+                        <p className="text-xs text-gray-600 mb-2">
+                          {event.location}
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {event.tags.slice(0, 2).map((tag) => (
+                            <Badge
+                              key={tag}
+                              variant="outline"
+                              className="text-xs bg-purple-50 text-purple-700 border-purple-200"
+                            >
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
@@ -619,12 +879,42 @@ const EventCard = ({ program }: EventCardProps) => {
               <Button
                 size="sm"
                 className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white"
+                onClick={() => {
+                  if (program.weblink) {
+                    window.open(program.weblink, '_blank');
+                  } else if (program.link) {
+                    window.open(program.link, '_blank');
+                  }
+                }}
               >
-                Register
+                {program.weblink || program.link ? 'View Details' : 'Register'}
               </Button>
             </div>
             <p className="text-sm text-gray-700 mb-3">{program.description}</p>
+            
+            {/* Additional Harvard event information */}
+            {(program.cost || program.organization) && (
+              <div className="text-xs text-gray-500 mb-2 space-y-1">
+                {program.cost && (
+                  <div><strong>Cost:</strong> {program.cost.replace(/&nbsp;/g, ' ')}</div>
+                )}
+                {program.organization && (
+                  <div><strong>Organization:</strong> {program.organization.replace(/&nbsp;/g, ' ')}</div>
+                )}
+              </div>
+            )}
+            
             <div className="flex flex-wrap gap-2">
+              {/* Source badge */}
+              {program.source && (
+                <Badge
+                  variant="outline"
+                  className="bg-blue-50 text-blue-700 border-blue-200 text-xs font-medium"
+                >
+                  {program.source}
+                </Badge>
+              )}
+              {/* Event tags */}
               {program.tags.map((tag) => (
                 <Badge
                   key={tag}
@@ -649,198 +939,92 @@ interface TimelineEventCardProps {
   onDelete?: (programId: string) => void;
 }
 
-const TimelineEventCard = ({
-  program,
-  isLast,
-  onEdit,
-  onDelete,
-}: TimelineEventCardProps) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedProgram, setEditedProgram] = useState(program);
-
-  const handleSave = () => {
-    if (onEdit) {
-      onEdit(editedProgram);
+// --- Minimalist TimelineEventCard with location popover and controls ---
+const TimelineEventCard = ({ program, isLast, onDelete }: TimelineEventCardProps) => {
+  const isTBD = !program.time || program.time.trim().toLowerCase() === 'tbd';
+  // For Gazette events, extract only the venue name (first part before a digit, comma, or 'Cambridge'), and remove weekdays
+  let locationDisplay = program.location || '';
+  if (program.source && program.source.toLowerCase().includes('gazette')) {
+    // Remove weekdays
+    locationDisplay = locationDisplay.replace(/\b(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b/gi, '').trim();
+    // Try to extract the first part (venue name)
+    const match = locationDisplay.match(/^[^\d,\n<]+/);
+    if (match) {
+      locationDisplay = match[0].trim();
     }
-    setIsEditing(false);
-  };
-
-  const handleDelete = () => {
-    if (onDelete && confirm("Are you sure you want to delete this event?")) {
-      onDelete(program.id);
-    }
-  };
+    // Remove trailing 'Harvard University' or 'Harvard Yard' if present
+    locationDisplay = locationDisplay.replace(/Harvard University|Harvard Yard/gi, '').trim();
+  }
+  // For Engage events, keep as is (already short)
+  // Never truncate with ellipsis, always wrap if needed
   return (
-    <div className="relative flex items-start space-x-6 pb-8">
-      {/* Timeline dot */}
-      <div className="relative z-10 flex-shrink-0">
-        <div className="h-12 w-12 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
-          <Calendar className="h-6 w-6 text-white" />
+    <div className="relative flex items-stretch pb-2">
+      {/* Timeline column: vertical line and dot, fixed width */}
+      <div className="relative flex flex-col items-center" style={{ width: 48, minWidth: 48 }}>
+        {/* Vertical timeline line (runs full height except for last event) */}
+        <div className="absolute left-1/2 top-0 w-1 h-full bg-gradient-to-b from-purple-200 to-pink-100" style={{ transform: 'translateX(-50%)', zIndex: 0, borderRadius: 2, opacity: 0.7 }} />
+        {/* Timeline dot */}
+        <div className="relative z-10 mt-2 mb-1">
+          <div className="h-4 w-4 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center shadow" />
         </div>
-      </div>
-
-      {/* Event content */}
-      <div className="flex-1 min-w-0">
-        <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
-          <div className="flex">
-            {/* Event image */}
-            <div className="w-24 h-24 flex-shrink-0">
-              <img
-                src={program.image}
-                alt={program.title}
-                className="w-full h-full object-cover rounded-l-lg"
-              />
-            </div>
-
-            {/* Event details */}
-            <div className="flex-1 p-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  {isEditing ? (
-                    <div className="space-y-3">
-                      <Input
-                        value={editedProgram.title}
-                        onChange={(e) =>
-                          setEditedProgram({
-                            ...editedProgram,
-                            title: e.target.value,
-                          })
-                        }
-                        className="font-semibold text-lg"
-                      />
-                      <div className="flex gap-2">
-                        <Input
-                          value={editedProgram.dates}
-                          onChange={(e) =>
-                            setEditedProgram({
-                              ...editedProgram,
-                              dates: e.target.value,
-                            })
-                          }
-                          placeholder="Date"
-                          className="flex-1"
-                        />
-                        <Input
-                          value={editedProgram.location}
-                          onChange={(e) =>
-                            setEditedProgram({
-                              ...editedProgram,
-                              location: e.target.value,
-                            })
-                          }
-                          placeholder="Location"
-                          className="flex-1"
-                        />
-                      </div>
-                      <textarea
-                        value={editedProgram.description}
-                        onChange={(e) =>
-                          setEditedProgram({
-                            ...editedProgram,
-                            description: e.target.value,
-                          })
-                        }
-                        className="w-full p-2 border rounded text-sm"
-                        rows={2}
-                      />
-                      <Input
-                        value={editedProgram.tags.join(", ")}
-                        onChange={(e) =>
-                          setEditedProgram({
-                            ...editedProgram,
-                            tags: e.target.value
-                              .split(", ")
-                              .filter((t) => t.trim()),
-                          })
-                        }
-                        placeholder="Tags (comma separated)"
-                      />
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          onClick={handleSave}
-                          className="bg-green-600 hover:bg-green-700 text-white"
-                        >
-                          Save
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setIsEditing(false)}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <h4 className="font-semibold text-gray-900 text-lg mb-1">
-                        {program.title}
-                      </h4>
-                      <div className="flex items-center text-sm text-gray-600 mb-2">
-                        <Calendar className="h-4 w-4 mr-1" />
-                        <span className="font-medium text-purple-600">
-                          {program.dates}
-                        </span>
-                        <span className="mx-2">•</span>
-                        <MapPin className="h-4 w-4 mr-1" />
-                        <span>{program.location}</span>
-                      </div>
-                      <p className="text-sm text-gray-700 mb-3 line-clamp-2">
-                        {program.description}
-                      </p>
-                      <div className="flex flex-wrap gap-1 mb-3">
-                        {program.tags.slice(0, 3).map((tag) => (
-                          <Badge
-                            key={tag}
-                            variant="outline"
-                            className="text-xs bg-purple-50 text-purple-700 border-purple-200"
-                          >
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-                <div className="ml-4 flex flex-col gap-2">
-                  {!isEditing && (
-                    <>
-                      <Button
-                        size="sm"
-                        className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white"
-                      >
-                        Register
-                      </Button>
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setIsEditing(true)}
-                          className="text-xs px-2"
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={handleDelete}
-                          className="text-xs px-2 text-red-600 hover:text-red-700"
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
+        {/* Time badge (if not TBD) */}
+        {!isTBD && (
+          <div className="relative z-10 px-2 py-0.5 rounded bg-white border border-purple-200 text-purple-700 font-semibold text-xs shadow-sm mt-1 mb-2">
+            {program.time}
           </div>
-        </Card>
+        )}
+      </div>
+      {/* Event content and location, grid layout for alignment */}
+      <div className="flex-1 grid grid-cols-[minmax(0,1fr)_minmax(120px,220px)_auto] gap-4 items-stretch">
+        {/* Main event info */}
+        <div className="flex items-center bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-150 p-2 gap-3 min-h-[64px]">
+          {/* Small event image */}
+          <img
+            src={program.image}
+            alt={program.title}
+            className="w-12 h-12 object-cover rounded-md flex-shrink-0 border border-gray-100"
+          />
+          {/* Details */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              {/* Event title as clickable link */}
+              <a
+                href={program.weblink || program.link || '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-purple-700 text-sm truncate hover:underline focus:outline-none"
+                tabIndex={0}
+              >
+                {program.title}
+              </a>
+            </div>
+            {/* Date (if not TBD) */}
+            {!isTBD && (
+              <span className="text-xs text-gray-500 font-medium mr-2">{program.dates}</span>
+            )}
+            {/* Minimal description, 1-2 lines only */}
+            <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">{program.description}</p>
+          </div>
+        </div>
+        {/* Location column, vertically padded, always wraps, never truncates */}
+        <div className="flex flex-col justify-center items-start px-3 py-3 bg-white border border-gray-200 rounded-lg min-w-[120px] max-w-[220px] text-xs text-blue-800 font-medium whitespace-pre-line break-words" style={{minHeight: '2.2em'}}>
+          {locationDisplay}
+        </div>
+        {/* Delete button, vertically centered */}
+        <div className="flex items-center h-full">
+          <button
+            className="px-2 py-1 rounded border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50 focus:outline-none"
+            onClick={() => onDelete && onDelete(program.id)}
+            type="button"
+          >
+            Delete
+          </button>
+        </div>
       </div>
     </div>
   );
 };
+// --- END Minimalist TimelineEventCard with location popover and controls ---
 
 interface EmptyStateProps {
   message: string;
@@ -859,5 +1043,37 @@ const EmptyState = ({ message }: EmptyStateProps) => {
     </div>
   );
 };
+
+// --- Grouping and rendering logic update ---
+// When rendering events for a day, group TBD events first (no time), then timed events sorted by time
+const renderDayEvents = (events: Program[]) => {
+  // TBD events: no time or time is empty/null
+  const tbdEvents = events.filter(e => !e.time || e.time.trim().toLowerCase() === 'tbd');
+  // Timed events: have a time
+  const timedEvents = events.filter(e => e.time && e.time.trim().toLowerCase() !== 'tbd');
+  // Sort timed events by time (assume 12-hour format, fallback to string sort)
+  const parseTime = (t: string) => {
+    if (!t) return 0;
+    const match = t.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i);
+    if (!match) return 0;
+    let hour = parseInt(match[1], 10);
+    let min = match[2] ? parseInt(match[2], 10) : 0;
+    const pm = match[3] && match[3].toLowerCase() === 'pm';
+    if (pm && hour !== 12) hour += 12;
+    if (!pm && hour === 12) hour = 0;
+    return hour * 60 + min;
+  };
+  timedEvents.sort((a, b) => parseTime(a.time) - parseTime(b.time));
+  // Render: TBD events (no heading), then timed events (with time badge)
+  return [
+    ...tbdEvents.map((program, idx) => (
+      <TimelineEventCard key={program.id} program={program} isLast={false} />
+    )),
+    ...timedEvents.map((program, idx) => (
+      <TimelineEventCard key={program.id} program={program} isLast={idx === timedEvents.length - 1} />
+    )),
+  ];
+};
+// --- END Grouping and rendering logic update ---
 
 export default UniversityPortal;
