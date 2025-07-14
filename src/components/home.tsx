@@ -144,27 +144,53 @@ const Home = ({ initialSignedInState = false }) => {
       if (event.source && event.source.toLowerCase().includes('gazette')) {
         time = extractTimeFromDescription(event.description);
       } else if (event.source && event.source.toLowerCase().includes('engage')) {
-        time = extractTimeFromDates(event.dates);
-      } else {
-        // fallback: try both
-        time = extractTimeFromDates(event.dates) || extractTimeFromDescription(event.description);
+        time = extractTimeFromDescription(event.description);
       }
-      return {
-        id: event.id || `harvard-${index}`,
-        title: event.title || "Untitled Event",
-        university: event.university || "Harvard University",
-        location: event.location || "Location TBD",
-        dates: event.dates || "Date TBD",
-        description: event.description || "No description available",
-        image: event.image || "https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=600&q=80",
-        type: (event.type as "event") || "event",
-        tags: event.tags || [],
-        link: event.link,
-        weblink: event.weblink,
-        organization: event.organization,
-        source: event.source,
-        time // <-- new field
+      
+      // Map event data based on source
+      let mappedEvent = {
+        id: event.id || `harvard-event-${index}`,
+        title: event.title || 'Harvard Event',
+        university: event.university || 'Harvard University',
+        location: event.location || 'Harvard Campus',
+        dates: event.dates || 'TBD',
+        description: event.description || event.title || 'Harvard Event',
+        image: event.image || 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=600&q=80',
+        type: event.type || 'event',
+        tags: event.tags || ['Event'],
+        link: event.link || '#',
+        weblink: event.weblink || event.link || '#',
+        cost: event.cost || '',
+        organization: event.organization || '',
+        source: event.source || 'Harvard Event'
       };
+
+      // Apply source-specific mapping
+      if (event.source && event.source.toLowerCase().includes('gazette')) {
+        // Use new Gazette fields from Puppeteer scraper
+        mappedEvent = {
+          ...mappedEvent,
+          location: event.location || mappedEvent.location,
+          dates: event.dateTime || mappedEvent.dates,
+          description: event.description || mappedEvent.description,
+          tags: event.categories || mappedEvent.tags,
+          organization: event.host || mappedEvent.organization,
+          image: event.image || mappedEvent.image
+        };
+      } else if (event.source && event.source.toLowerCase().includes('engage')) {
+        // Use new Engage fields from Puppeteer scraper
+        mappedEvent = {
+          ...mappedEvent,
+          location: event.location || mappedEvent.location,
+          dates: event.dateTime || mappedEvent.dates,
+          description: event.description || mappedEvent.description,
+          tags: event.categories || mappedEvent.tags,
+          organization: event.host || mappedEvent.organization,
+          image: event.image || mappedEvent.image
+        };
+      }
+
+      return mappedEvent;
     });
   };
 

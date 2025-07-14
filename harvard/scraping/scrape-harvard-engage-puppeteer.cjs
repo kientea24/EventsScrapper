@@ -7,27 +7,40 @@ async function scrapeHarvardEngage() {
   
   let browser;
   try {
-    // Launch browser
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    browser = await puppeteer.launch({ 
+      headless: true, 
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--no-first-run', '--no-zygote', '--disable-gpu'],
+      timeout: 120000 // 2 minutes timeout
     });
     
     const page = await browser.newPage();
     
-    // Set viewport
-    await page.setViewport({ width: 1280, height: 800 });
+    // Set longer timeouts
+    await page.setDefaultNavigationTimeout(120000); // 2 minutes
+    await page.setDefaultTimeout(120000); // 2 minutes
     
-    // Set user agent
-    await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36');
+    // Set user agent to avoid detection
+    await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     
     console.log('📡 Navigating to Harvard Engage...');
-    await page.goto('https://engage.gsas.harvard.edu/events', {
-      waitUntil: 'networkidle2',
-      timeout: 60000
-    });
     
-    console.log('⏳ Waiting for page to load...');
+    // Navigate with retry logic
+    let retries = 3;
+    while (retries > 0) {
+      try {
+        await page.goto('https://engage.gsas.harvard.edu/events', { 
+          waitUntil: 'networkidle2',
+          timeout: 120000 
+        });
+        break;
+      } catch (error) {
+        retries--;
+        console.log(`⚠️ Navigation attempt failed, retries left: ${retries}`);
+        if (retries === 0) throw error;
+        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds before retry
+      }
+    }
+    
     await new Promise(resolve => setTimeout(resolve, 5000));
     
     // Function to click "Load More" buttons
@@ -100,23 +113,128 @@ async function scrapeHarvardEngage() {
      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
      await new Promise(resolve => setTimeout(resolve, 2000));
     
-    console.log('📄 Extracting HTML content...');
-    const html = await page.content();
+    // Get all event card links from the main page
+    const eventLinks = await page.evaluate(() => {
+      const anchors = Array.from(document.querySelectorAll('a[href^="/event/"]'));
+      // Only unique event links
+      const seen = new Set();
+      return anchors
+        .map(a => a.getAttribute('href'))
+        .filter(href => {
+          if (!href) return false;
+          if (seen.has(href)) return false;
+          seen.add(href);
+          return true;
+        })
+        .map(href => 'https://engage.gsas.harvard.edu' + href);
+    });
+    console.log(`🔗 Found ${eventLinks.length} event links.`);
+
+    // Visit each event detail page and extract required fields
+    const events = [];
+    // Scrape each event detail page
+    console.log(`🔍 Scraping ${eventLinks.length} event detail pages...`);
     
-    // Save raw HTML
-    const rawOutputPath = path.join(__dirname, '../events/harvard-engage-html-raw.html');
-    fs.writeFileSync(rawOutputPath, html);
-    console.log('💾 Saved raw HTML to:', rawOutputPath);
-    
-    // Parse events from HTML
-    const events = parseEventsFromHTML(html);
-    console.log(`🎉 Found ${events.length} events in HTML`);
-    
+    for (let i = 0; i < eventLinks.length; i++) {
+      const link = eventLinks[i];
+      console.log(`📄 Scraping event ${i + 1}/${eventLinks.length}: ${link}`);
+      
+      try {
+        // Add delay between requests to avoid rate limiting
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
+        }
+        
+        // Navigate to event detail page with retry
+        let detailPage;
+        let retries = 2;
+        while (retries > 0) {
+          try {
+            detailPage = await browser.newPage();
+            await detailPage.setDefaultNavigationTimeout(60000); // 1 minute for detail pages
+            await detailPage.setDefaultTimeout(60000);
+            await detailPage.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+            
+            await detailPage.goto(link, { 
+              waitUntil: 'domcontentloaded',
+              timeout: 60000 
+            });
+            break;
+          } catch (error) {
+            retries--;
+            console.log(`⚠️ Detail page navigation failed, retries left: ${retries}`);
+            if (detailPage) await detailPage.close();
+            if (retries === 0) {
+              console.log(`❌ Failed to load event detail page: ${link}`);
+              continue;
+            }
+            await new Promise(resolve => setTimeout(resolve, 3000));
+          }
+        }
+        
+        if (!detailPage) continue;
+
+        // Extract details from the event detail page
+        const event = await detailPage.evaluate(() => {
+          // Title
+          const title = document.querySelector('h1, h2, .event-title, .MuiTypography-h3')?.innerText?.trim() || '';
+          // Date and Time
+          let dateTime = '';
+          const dateTimeEl = Array.from(document.querySelectorAll('div, section')).find(el => el.innerText && el.innerText.match(/Date and Time/i));
+          if (dateTimeEl) {
+            const dt = dateTimeEl.innerText.match(/Date and Time[\s\n]*([\s\S]*?)(Location|Description|Categories|Host Organization|RSVP|$)/i);
+            if (dt && dt[1]) dateTime = dt[1].replace(/\n+/g, ' ').trim();
+          }
+          // Location (full address)
+          let location = '';
+          const locEl = Array.from(document.querySelectorAll('div, section')).find(el => el.innerText && el.innerText.match(/Location/i));
+          if (locEl) {
+            const loc = locEl.innerText.match(/Location[\s\n]*([\s\S]*?)(Date and Time|Description|Categories|Host Organization|RSVP|$)/i);
+            if (loc && loc[1]) location = loc[1].replace(/\n+/g, ' ').trim();
+          }
+          // Description (try to get the main description block)
+          let description = '';
+          const descEl = Array.from(document.querySelectorAll('div, section, p')).find(el => el.innerText && el.innerText.match(/Description/i));
+          if (descEl) {
+            const desc = descEl.innerText.match(/Description[\s\n]*([\s\S]*?)(Categories|Host Organization|Location|Date and Time|RSVP|$)/i);
+            if (desc && desc[1]) description = desc[1].replace(/\n+/g, '\n').trim();
+          }
+          // Categories (as array)
+          let categories = [];
+          const catEl = Array.from(document.querySelectorAll('div, section')).find(el => el.innerText && el.innerText.match(/Categories/i));
+          if (catEl) {
+            const cats = catEl.innerText.match(/Categories[\s\n]*([\s\S]*?)(Host Organization|Description|Location|Date and Time|RSVP|$)/i);
+            if (cats && cats[1]) {
+              categories = cats[1].split(/\n|,/).map(s => s.trim()).filter(Boolean);
+            }
+          }
+          // Host Organization
+          let host = '';
+          const hostEl = Array.from(document.querySelectorAll('div, section')).find(el => el.innerText && el.innerText.match(/Host Organization/i));
+          if (hostEl) {
+            const h = hostEl.innerText.match(/Host Organization[\s\n]*([\s\S]*?)(Categories|Description|Location|Date and Time|RSVP|$)/i);
+            if (h && h[1]) host = h[1].replace(/\n+/g, ' ').trim();
+          }
+          // Image (try to get the main event image)
+          let image = '';
+          const imgEl = document.querySelector('img');
+          if (imgEl && imgEl.src) image = imgEl.src;
+          return { title, dateTime, location, description, categories, host, image };
+        });
+        // Add link and id
+        event.link = link;
+        event.id = link.split('/').pop();
+        event.source = "Harvard Engage"; // Add source field
+        events.push(event);
+      } catch (err) {
+        console.error('❌ Error scraping event detail:', link, err.message);
+      }
+    }
+
     // Save parsed events
     const outputPath = path.join(__dirname, '../events/parsed-harvard-engage.json');
     fs.writeFileSync(outputPath, JSON.stringify(events, null, 2));
     console.log('💾 Saved parsed events to:', outputPath);
-    
     return events;
     
   } catch (error) {

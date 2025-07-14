@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
+  X,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from "@/components/ui/sheet";
 
 interface Program {
   id: string;
@@ -42,6 +44,9 @@ interface Program {
   organization?: string;
   source?: string;
   time?: string; // Added time field
+  locationVenue?: string; // Added for Gazette events
+  locationAddress?: string; // Added for Gazette events
+  locationCity?: string; // Added for Gazette events
 }
 
 interface UniversityPortalProps {
@@ -941,87 +946,237 @@ interface TimelineEventCardProps {
 
 // --- Minimalist TimelineEventCard with location popover and controls ---
 const TimelineEventCard = ({ program, isLast, onDelete }: TimelineEventCardProps) => {
+  const [open, setOpen] = useState(false);
   const isTBD = !program.time || program.time.trim().toLowerCase() === 'tbd';
   // For Gazette events, extract only the venue name (first part before a digit, comma, or 'Cambridge'), and remove weekdays
   let locationDisplay = program.location || '';
+  let locationVenue = '';
+  let locationAddress = '';
+  let locationMapUrl = '';
+  let showMapLink = false;
   if (program.source && program.source.toLowerCase().includes('gazette')) {
-    // Remove weekdays
-    locationDisplay = locationDisplay.replace(/\b(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b/gi, '').trim();
-    // Try to extract the first part (venue name)
-    const match = locationDisplay.match(/^[^\d,\n<]+/);
-    if (match) {
-      locationDisplay = match[0].trim();
+    // For Gazette events, check if it has a full address pattern
+    if (locationDisplay.includes(',') || locationDisplay.includes('St.') || locationDisplay.includes('Ave.') || locationDisplay.includes('Cambridge')) {
+      // Full address detected - split like Engage events
+      const parts = locationDisplay.split(/(?=\d)/); // Split before first digit
+      if (parts.length > 1) {
+        locationVenue = parts[0].trim();
+        locationAddress = parts.slice(1).join('').trim();
+        // Check for "View Map" link
+        if (locationAddress.includes('View Map')) {
+          const mapParts = locationAddress.split('View Map');
+          locationAddress = mapParts[0].trim();
+          locationMapUrl = `https://maps.google.com/?q=${encodeURIComponent(locationAddress)}`;
+          showMapLink = true;
+        }
+      } else {
+        locationDisplay = locationDisplay.replace(/\b(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b/gi, '').trim();
+        const match = locationDisplay.match(/^[^\d,\n<]+/);
+        if (match) {
+          locationDisplay = match[0].trim();
+        }
+        locationDisplay = locationDisplay.replace(/Harvard University|Harvard Yard/gi, '').trim();
+      }
+    } else {
+      // Apply existing Gazette logic for simple locations
+      locationDisplay = locationDisplay.replace(/\b(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b/gi, '').trim();
+      const match = locationDisplay.match(/^[^\d,\n<]+/);
+      if (match) {
+        locationDisplay = match[0].trim();
+      }
+      locationDisplay = locationDisplay.replace(/Harvard University|Harvard Yard/gi, '').trim();
     }
-    // Remove trailing 'Harvard University' or 'Harvard Yard' if present
-    locationDisplay = locationDisplay.replace(/Harvard University|Harvard Yard/gi, '').trim();
+  } else if (program.source && program.source.toLowerCase().includes('engage')) {
+    // Engage logic unchanged
+    const parts = locationDisplay.split(/(?=\d)/);
+    if (parts.length > 1) {
+      locationVenue = parts[0].trim();
+      locationAddress = parts.slice(1).join('').trim();
+      if (locationAddress.includes('View Map')) {
+        const mapParts = locationAddress.split('View Map');
+        locationAddress = mapParts[0].trim();
+        locationMapUrl = `https://maps.google.com/?q=${encodeURIComponent(locationAddress)}`;
+        showMapLink = true;
+      }
+    }
   }
-  // For Engage events, keep as is (already short)
-  // Never truncate with ellipsis, always wrap if needed
+  // For Engage and all other events, show full address as is (do not modify, do not split)
   return (
-    <div className="relative flex items-stretch pb-2">
-      {/* Timeline column: vertical line and dot, fixed width */}
-      <div className="relative flex flex-col items-center" style={{ width: 48, minWidth: 48 }}>
-        {/* Vertical timeline line (runs full height except for last event) */}
-        <div className="absolute left-1/2 top-0 w-1 h-full bg-gradient-to-b from-purple-200 to-pink-100" style={{ transform: 'translateX(-50%)', zIndex: 0, borderRadius: 2, opacity: 0.7 }} />
-        {/* Timeline dot */}
-        <div className="relative z-10 mt-2 mb-1">
-          <div className="h-4 w-4 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center shadow" />
-        </div>
-        {/* Time badge (if not TBD) */}
-        {!isTBD && (
-          <div className="relative z-10 px-2 py-0.5 rounded bg-white border border-purple-200 text-purple-700 font-semibold text-xs shadow-sm mt-1 mb-2">
-            {program.time}
+    <>
+      <div className="relative flex items-stretch pb-2">
+        {/* Timeline column: vertical line and dot, fixed width */}
+        <div className="relative flex flex-col items-center" style={{ width: 48, minWidth: 48 }}>
+          {/* Vertical timeline line (runs full height except for last event) */}
+          <div className="absolute left-1/2 top-0 w-1 h-full bg-gradient-to-b from-purple-200 to-pink-100" style={{ transform: 'translateX(-50%)', zIndex: 0, borderRadius: 2, opacity: 0.7 }} />
+          {/* Timeline dot */}
+          <div className="relative z-10 mt-2 mb-1">
+            <div className="h-4 w-4 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center shadow" />
           </div>
-        )}
-      </div>
-      {/* Event content and location, grid layout for alignment */}
-      <div className="flex-1 grid grid-cols-[minmax(0,1fr)_minmax(120px,220px)_auto] gap-4 items-stretch">
-        {/* Main event info */}
-        <div className="flex items-center bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-150 p-2 gap-3 min-h-[64px]">
-          {/* Small event image */}
-          <img
-            src={program.image}
-            alt={program.title}
-            className="w-12 h-12 object-cover rounded-md flex-shrink-0 border border-gray-100"
-          />
-          {/* Details */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-0.5">
-              {/* Event title as clickable link */}
-              <a
-                href={program.weblink || program.link || '#'}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-semibold text-purple-700 text-sm truncate hover:underline focus:outline-none"
-                tabIndex={0}
-              >
-                {program.title}
-              </a>
+          {/* Time badge (if not TBD) */}
+          {!isTBD && (
+            <div className="relative z-10 px-2 py-0.5 rounded bg-white border border-purple-200 text-purple-700 font-semibold text-xs shadow-sm mt-1 mb-2">
+              {program.time}
             </div>
-            {/* Date (if not TBD) */}
-            {!isTBD && (
-              <span className="text-xs text-gray-500 font-medium mr-2">{program.dates}</span>
+          )}
+        </div>
+        {/* Event content and location, grid layout for alignment */}
+        <div className="flex-1 grid grid-cols-[minmax(0,1fr)_minmax(120px,220px)_auto] gap-4 items-stretch">
+          {/* Main event info */}
+          <div className="flex items-center bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-150 p-2 gap-3 min-h-[64px]">
+            {/* Small event image */}
+            <img
+              src={program.image}
+              alt={program.title}
+              className="w-12 h-12 object-cover rounded-md flex-shrink-0 border border-gray-100"
+            />
+            {/* Details */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                {/* Event title as clickable, opens details sheet */}
+                <button
+                  onClick={() => setOpen(true)}
+                  className="font-semibold text-purple-700 text-sm truncate hover:underline focus:outline-none bg-transparent border-none p-0 m-0 cursor-pointer"
+                  tabIndex={0}
+                  type="button"
+                >
+                  {program.title}
+                </button>
+              </div>
+              {/* Date (if not TBD) */}
+              {!isTBD && (
+                <span className="text-xs text-gray-500 font-medium mr-2">{program.dates}</span>
+              )}
+              {/* Minimal description, 1-2 lines only */}
+              <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">{program.description}</p>
+            </div>
+          </div>
+          {/* Location column, vertically padded, always wraps, never truncates */}
+          <div className="flex flex-col justify-center items-start px-3 py-3 bg-white border border-gray-200 rounded-lg min-w-[120px] max-w-[220px] text-xs text-blue-800 font-medium whitespace-pre-line break-words" style={{minHeight: '2.2em'}}>
+            {program.source && program.source.toLowerCase().includes('engage') ? (
+              <span>{program.location.replace(' View Map', '')}</span>
+            ) : program.source && program.source.toLowerCase().includes('gazette') ? (
+              program.locationVenue || program.locationAddress || program.locationCity ? (
+                <>
+                  {program.locationVenue && <span>{program.locationVenue}</span>}
+                  {program.locationAddress && <span>{program.locationAddress}</span>}
+                  {program.locationCity && <span>{program.locationCity}</span>}
+                </>
+              ) : locationVenue && locationAddress ? (
+                <>
+                  <span>{locationVenue}</span>
+                  <span>{locationAddress}</span>
+                  {program.locationCity && <span>{program.locationCity}</span>}
+                </>
+              ) : (
+                <span>{locationDisplay}</span>
+              )
+            ) : (
+              <span>{program.location}</span>
             )}
-            {/* Minimal description, 1-2 lines only */}
-            <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">{program.description}</p>
+          </div>
+          {/* Delete button, vertically centered */}
+          <div className="flex items-center h-full">
+            <button
+              className="px-2 py-1 rounded border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50 focus:outline-none"
+              onClick={() => onDelete && onDelete(program.id)}
+              type="button"
+            >
+              Delete
+            </button>
           </div>
         </div>
-        {/* Location column, vertically padded, always wraps, never truncates */}
-        <div className="flex flex-col justify-center items-start px-3 py-3 bg-white border border-gray-200 rounded-lg min-w-[120px] max-w-[220px] text-xs text-blue-800 font-medium whitespace-pre-line break-words" style={{minHeight: '2.2em'}}>
-          {locationDisplay}
-        </div>
-        {/* Delete button, vertically centered */}
-        <div className="flex items-center h-full">
-          <button
-            className="px-2 py-1 rounded border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50 focus:outline-none"
-            onClick={() => onDelete && onDelete(program.id)}
-            type="button"
-          >
-            Delete
-          </button>
-        </div>
       </div>
-    </div>
+      {/* Event Details Sheet */}
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="right" className="max-w-lg w-full p-0 bg-white overflow-y-auto">
+          <div className="flex flex-col h-full">
+            {/* Header with image and close */}
+            <div className="relative h-56 w-full bg-gray-100">
+              <img src={program.image} alt={program.title} className="w-full h-full object-cover" />
+              <SheetClose asChild>
+                <button className="absolute top-4 right-4 bg-white/80 hover:bg-white rounded-full p-1 shadow" aria-label="Close">
+                  <X className="h-5 w-5 text-gray-700" />
+                </button>
+              </SheetClose>
+            </div>
+            <div className="p-6 flex-1 flex flex-col gap-4">
+              {/* Title and meta */}
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">{program.title}</h2>
+                <div className="flex items-center gap-2 text-sm text-gray-600 mb-2 flex-wrap">
+                  <Calendar className="h-4 w-4 text-purple-500" />
+                  <span>{program.dates}</span>
+                  {!isTBD && <>
+                    <span className="mx-1">•</span>
+                    <Clock className="h-4 w-4 text-purple-500" />
+                    <span>{program.time}</span>
+                  </>}
+                  <MapPin className="h-4 w-4 text-purple-500" />
+                  {program.source && program.source.toLowerCase().includes('engage') ? (
+                    <span className="flex flex-col">
+                      {locationVenue && <span>{locationVenue}</span>}
+                      {locationAddress && <span>{locationAddress}</span>}
+                      {showMapLink && locationMapUrl && (
+                        <a href={locationMapUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline text-sm">
+                          View Map
+                        </a>
+                      )}
+                    </span>
+                  ) : program.source && program.source.toLowerCase().includes('gazette') ? (
+                    program.locationVenue || program.locationAddress || program.locationCity ? (
+                      <span className="flex flex-col">
+                        {program.locationVenue && <span>{program.locationVenue}</span>}
+                        {program.locationAddress && <span>{program.locationAddress}</span>}
+                        {program.locationCity && <span>{program.locationCity}</span>}
+                      </span>
+                    ) : locationVenue && locationAddress ? (
+                      <span className="flex flex-col">
+                        {locationVenue && <span>{locationVenue}</span>}
+                        {locationAddress && <span>{locationAddress}</span>}
+                        {program.locationCity && <span>{program.locationCity}</span>}
+                      </span>
+                    ) : (
+                      <span>{locationDisplay}</span>
+                    )
+                  ) : (
+                    <span>{program.location}</span>
+                  )}
+                </div>
+              </div>
+              {/* Host/organization (mock if missing) */}
+              <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                <Users className="h-4 w-4 text-purple-400" />
+                <span>Hosted by {program.organization || 'Harvard Events Team'}</span>
+              </div>
+              {/* Description */}
+              <div>
+                <h3 className="text-base font-semibold text-gray-800 mb-1">About Event</h3>
+                <p className="text-gray-700 leading-relaxed whitespace-pre-line">{program.description}</p>
+              </div>
+              {/* Tags/categories */}
+              {program.tags && program.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {program.tags.map((tag) => (
+                    <span key={tag} className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-xs font-medium border border-purple-100">{tag}</span>
+                  ))}
+                </div>
+              )}
+              {/* Register/View Details button */}
+              {(program.weblink || program.link) && (
+                <a
+                  href={program.weblink || program.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 inline-block px-4 py-2 rounded bg-gradient-to-r from-purple-500 to-pink-500 text-white text-sm font-semibold hover:from-purple-600 hover:to-pink-600 focus:outline-none"
+                >
+                  View Event Page
+                </a>
+              )}
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 };
 // --- END Minimalist TimelineEventCard with location popover and controls ---
