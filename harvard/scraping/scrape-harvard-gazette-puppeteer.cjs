@@ -40,22 +40,120 @@ async function scrapeHarvardGazette() {
     });
     await new Promise(resolve => setTimeout(resolve, 3000));
     
-    // Get all event card links from the main page
-    const eventLinks = await page.evaluate(() => {
-      const anchors = Array.from(document.querySelectorAll('a[href*="trumbaEmbed=view%3devent"]'));
-      // Only unique event links
-      const seen = new Set();
-      return anchors
-        .map(a => a.getAttribute('href'))
-        .filter(href => {
-          if (!href) return false;
-          if (seen.has(href)) return false;
-          seen.add(href);
-          return true;
-        });
-    });
+    // Check for iframes (Trumba calendar is likely embedded)
+    console.log('🔍 Looking for embedded calendar iframe...');
+    const iframes = await page.$$('iframe');
+    console.log(`Found ${iframes.length} iframes`);
+    
+    let eventLinks = [];
+    
+    // Try to extract links from iframes first
+    for (let i = 0; i < iframes.length; i++) {
+      try {
+        console.log(`Checking iframe ${i + 1}/${iframes.length}`);
+        const frame = iframes[i];
+        const frameContent = await frame.contentFrame();
+        
+        if (frameContent) {
+          // Wait for iframe to load
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+          // Try to find event links in the iframe
+          const frameLinks = await frameContent.evaluate(() => {
+            const selectors = [
+              'a[href*="trumbaEmbed=view%3devent"]',
+              'a[href*="eventid"]',
+              'a[href*="view%3devent"]',
+              '.event a',
+              '.event-card a',
+              'a[href*="event"]'
+            ];
+            
+            let anchors = [];
+            for (const selector of selectors) {
+              const found = Array.from(document.querySelectorAll(selector));
+              if (found.length > 0) {
+                console.log(`Found ${found.length} links with selector: ${selector}`);
+                anchors = found;
+                break;
+              }
+            }
+            
+            return anchors.map(a => a.href).filter(href => href && href.includes('event'));
+          });
+          
+          if (frameLinks.length > 0) {
+            console.log(`Found ${frameLinks.length} event links in iframe ${i + 1}`);
+            eventLinks = frameLinks;
+            break;
+          }
+        }
+      } catch (err) {
+        console.log(`Error checking iframe ${i + 1}: ${err.message}`);
+      }
+    }
+    
+    // If no links found in iframes, try the main page
+    if (eventLinks.length === 0) {
+      console.log('No event links found in iframes, trying main page...');
+      eventLinks = await page.evaluate(() => {
+        // Try multiple selectors to find event links
+        const selectors = [
+          'a[href*="trumbaEmbed=view%3devent"]',
+          'a[href*="event"]',
+          'a[href*="gazette"]',
+          'a[href*="trumba"]',
+          '.event a',
+          '.event-card a',
+          'a[href*="view%3devent"]'
+        ];
+        
+        let anchors = [];
+        for (const selector of selectors) {
+          const found = Array.from(document.querySelectorAll(selector));
+          if (found.length > 0) {
+            console.log(`Found ${found.length} links with selector: ${selector}`);
+            anchors = found;
+            break;
+          }
+        }
+        
+        // If no links found with specific selectors, try to get all links and filter
+        if (anchors.length === 0) {
+          anchors = Array.from(document.querySelectorAll('a[href]'));
+          console.log(`Total links found: ${anchors.length}`);
+          // Log first few links for debugging
+          anchors.slice(0, 5).forEach((a, i) => {
+            console.log(`Link ${i}: ${a.href} - ${a.textContent?.trim()}`);
+          });
+        }
+        
+        // Only unique event links
+        const seen = new Set();
+        return anchors
+          .map(a => a.getAttribute('href'))
+          .filter(href => {
+            if (!href) return false;
+            if (seen.has(href)) return false;
+            seen.add(href);
+            return true;
+          });
+      });
+    }
+    
     console.log(`🔗 Found ${eventLinks.length} event links.`);
-
+    
+    // Debug: log the first few links
+    if (eventLinks.length > 0) {
+      console.log('First few links found:');
+      eventLinks.slice(0, 3).forEach((link, i) => {
+        console.log(`  ${i + 1}: ${link}`);
+      });
+    }
+    
+    // Get more events to ensure we have current ones
+    // Remove or comment out any .slice(0, 10), .slice(0, 30), or similar event limiting on eventLinks or limitedEventLinks
+    
     // Visit each event detail page and extract required fields
     const events = [];
     // Scrape each event detail page
@@ -71,6 +169,14 @@ async function scrapeHarvardGazette() {
           await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
         }
         
+        // Convert relative URLs to absolute URLs
+        let fullUrl = link;
+        if (link.startsWith('/')) {
+          fullUrl = `https://news.harvard.edu${link}`;
+        } else if (!link.startsWith('http')) {
+          fullUrl = `https://news.harvard.edu/${link}`;
+        }
+        
         // Navigate to event detail page with retry
         let detailPage;
         let retries = 2;
@@ -81,7 +187,7 @@ async function scrapeHarvardGazette() {
             await detailPage.setDefaultTimeout(120000);
             await detailPage.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36');
             
-            await detailPage.goto(link, {
+            await detailPage.goto(fullUrl, {
               waitUntil: 'networkidle2',
               timeout: 120000
             });
@@ -99,11 +205,72 @@ async function scrapeHarvardGazette() {
         }
 
         // Extract details from the event detail page
-        const event = await detailPage.evaluate(() => {
-          // Title
-          const title = document.querySelector('h1, h2, .event-title, .MuiTypography-h3, .trumba-event-title')?.innerText?.trim() || '';
+        let event = await detailPage.evaluate(async (isFirst) => {
+          // Debug: log the page content structure
+          console.log('Page title:', document.title);
+          console.log('Page URL:', window.location.href);
+          
+          // Check if we're in an iframe
+          const iframes = document.querySelectorAll('iframe');
+          console.log(`Found ${iframes.length} iframes on event detail page`);
+          
+          // If there are iframes, try to get content from the first iframe
+          if (iframes.length > 0) {
+            console.log('Event detail page has iframes, content likely embedded');
+            // Return a flag to indicate we need to handle iframe content
+            return { hasIframes: true, iframeCount: iframes.length };
+          }
+          
+          // Title - try multiple selectors
+          const titleSelectors = [
+            'h1', 'h2', '.event-title', '.MuiTypography-h3', '.trumba-event-title',
+            '.event-detail-title', '.title', '[data-testid="event-title"]',
+            '.event-name', '.event-header h1', '.event-header h2', '.event-header .title',
+            '.trumba-event-name', '.event-detail h1', '.event-detail h2',
+            '.event-info h1', '.event-info h2', '.event-info .title'
+          ];
+          let title = '';
+          for (const selector of titleSelectors) {
+            const el = document.querySelector(selector);
+            if (el && el.innerText.trim()) {
+              title = el.innerText.trim();
+              console.log('Found title with selector:', selector, 'Value:', title);
+              break;
+            }
+          }
+          
+          // If no title found with selectors, try to find any text that looks like an event title
+          if (!title || title.toLowerCase() === 'harvard events' || title.toLowerCase() === 'sections') {
+            console.log('No valid title found with selectors, trying alternative methods...');
+            
+            // Look for any text that might be an event title
+            const allText = document.body.innerText;
+            const lines = allText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            
+            console.log('First 10 lines of page text:', lines.slice(0, 10));
+            
+            // Look for lines that might be event titles (not too long, not generic)
+            for (const line of lines) {
+              if (line.length > 5 && line.length < 100 && 
+                  !line.toLowerCase().includes('harvard events') &&
+                  !line.toLowerCase().includes('sections') &&
+                  !line.toLowerCase().includes('where') &&
+                  !line.toLowerCase().includes('when') &&
+                  !line.toLowerCase().includes('details') &&
+                  !line.toLowerCase().includes('organization') &&
+                  !line.toLowerCase().includes('classification') &&
+                  !line.toLowerCase().includes('cost') &&
+                  !line.toLowerCase().includes('contact') &&
+                  !line.toLowerCase().includes('more info')) {
+                title = line;
+                console.log('Found potential title from text analysis:', title);
+                break;
+              }
+            }
+          }
+          
           if (title.toLowerCase() === 'sections') return null; // Skip non-events
-
+          
           // Helper function to extract section content
           function extractSection(sectionName) {
             // Look for the section by various patterns
@@ -115,10 +282,12 @@ async function scrapeHarvardGazette() {
             
             // Get all text content
             const allText = document.body.innerText;
+            console.log('Page text content (first 500 chars):', allText.substring(0, 500));
             
             for (const pattern of patterns) {
               const match = allText.match(pattern);
               if (match && match[1]) {
+                console.log(`Found ${sectionName} section:`, match[1].substring(0, 100));
                 return match[1].trim();
               }
             }
@@ -159,11 +328,59 @@ async function scrapeHarvardGazette() {
             dateTime = whenSection.replace(/\n+/g, ' ').trim();
           }
 
-          // Extract description from 'Details' section
+          // Extract description from 'Details' section and cut off at LINK
           let description = '';
+          let eventLink = '';
           const detailsSection = extractSection('Details');
           if (detailsSection) {
-            description = detailsSection.replace(/\n+/g, '\n').trim();
+            // Split at "LINK" to separate description from link
+            const linkIndex = detailsSection.indexOf('LINK');
+            if (linkIndex !== -1) {
+              description = detailsSection.substring(0, linkIndex).replace(/\n+/g, '\n').trim();
+              // Extract the link after "LINK"
+              const afterLink = detailsSection.substring(linkIndex + 4).trim();
+              // Find the actual URL (look for http or www)
+              const urlMatch = afterLink.match(/(https?:\/\/[^\s]+|www\.[^\s]+)/);
+              if (urlMatch) {
+                eventLink = urlMatch[1];
+                // If it starts with www, add https://
+                if (eventLink.startsWith('www.')) {
+                  eventLink = 'https://' + eventLink;
+                }
+              }
+            } else {
+              description = detailsSection.replace(/\n+/g, '\n').trim();
+            }
+          }
+          
+          // Also try to extract link from "More info" section
+          if (!eventLink) {
+            const moreInfoSection = extractSection('More info');
+            if (moreInfoSection) {
+              const urlMatch = moreInfoSection.match(/(https?:\/\/[^\s]+|www\.[^\s]+)/);
+              if (urlMatch) {
+                eventLink = urlMatch[1];
+                if (eventLink.startsWith('www.')) {
+                  eventLink = 'https://' + eventLink;
+                }
+              }
+            }
+          }
+          
+          // Try to extract link from the entire iframe text if still not found
+          if (!eventLink) {
+            const urlMatch = iframeText.match(/(https?:\/\/[^\s]+|www\.[^\s]+)/);
+            if (urlMatch) {
+              eventLink = urlMatch[1];
+              if (eventLink.startsWith('www.')) {
+                eventLink = 'https://' + eventLink;
+              }
+            }
+          }
+          
+          // Debug: Log if we found an event link
+          if (eventLink) {
+            console.log(`🔗 Found event link for "${title}": ${eventLink}`);
           }
 
           // Extract organization from 'Organization' section
@@ -185,9 +402,116 @@ async function scrapeHarvardGazette() {
           const imgEl = document.querySelector('img');
           if (imgEl && imgEl.src) image = imgEl.src;
 
-          return { title, dateTime, location, locationVenue, locationAddress, locationCity, fullLocation, description, categories, host, image };
-        });
-        if (!event) {
+          console.log('Extracted event data:', {
+            title: title.substring(0, 50),
+            locationVenue: locationVenue.substring(0, 30),
+            dateTime: dateTime.substring(0, 30),
+            hasDescription: !!description,
+            hasHost: !!host
+          });
+
+          return { title, dateTime, location, locationVenue, locationAddress, locationCity, fullLocation, description, categories, host, image, eventLink };
+        }, i === 0);
+        
+        // If the page has iframes, try to extract content from the iframe
+        if (event && event.hasIframes) {
+          console.log(`Event detail page has ${event.iframeCount} iframes, extracting from iframe #1...`);
+          
+          const iframes = await detailPage.$$('iframe');
+          if (iframes.length > 1) {
+            const frame = iframes[1]; // Use iframe #1 (second iframe)
+            const frameContent = await frame.contentFrame();
+            if (frameContent) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              const allText = await frameContent.evaluate(() => document.body.innerText);
+              const lines = allText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+              // Parse fields from lines
+              let title = '';
+              let dateTime = '';
+              let location = '';
+              let locationVenue = '';
+              let locationAddress = '';
+              let locationCity = '';
+              let fullLocation = '';
+              let description = '';
+              let eventLink = '';
+              let categories = [];
+              let host = '';
+              let image = '';
+              // Find title (first non-empty, non-generic line after 'opens in new window')
+              for (let j = 1; j < lines.length; j++) {
+                if (lines[j] && !lines[j].toLowerCase().includes('opens in new window')) {
+                  title = lines[j];
+                  break;
+                }
+              }
+              // Find date/time, location, and other fields
+              for (let j = 2; j < lines.length; j++) {
+                if (lines[j].startsWith('WHEN')) {
+                  dateTime = lines[j].replace('WHEN', '').replace(/\t+/g, ' ').trim();
+                }
+                if (lines[j].startsWith('WHERE')) {
+                  locationVenue = lines[j].replace('WHERE', '').replace(/\t+/g, ' ').trim();
+                  // Next lines may be address/city
+                  if (lines[j+1]) locationAddress = lines[j+1];
+                  if (lines[j+2]) locationCity = lines[j+2];
+                  fullLocation = [locationVenue, locationAddress, locationCity].filter(Boolean).join(', ');
+                }
+                if (lines[j].startsWith('GAZETTE CLASSIFICATION')) {
+                  categories = lines[j].replace('GAZETTE CLASSIFICATION', '').replace(/\t+/g, ' ').split(',').map(s => s.trim()).filter(Boolean);
+                }
+                if (lines[j].startsWith('ORGANIZATION/SPONSOR')) {
+                  host = lines[j].replace('ORGANIZATION/SPONSOR', '').replace(/\t+/g, ' ').trim();
+                }
+                if (lines[j].startsWith('DETAILS')) {
+                  // Description is everything after DETAILS until LINK
+                  const detailsText = lines.slice(j+1).join(' ');
+                  const linkIndex = detailsText.indexOf('LINK');
+                  if (linkIndex !== -1) {
+                    description = detailsText.substring(0, linkIndex).trim();
+                    // Extract the link after "LINK"
+                    const afterLink = detailsText.substring(linkIndex + 4).trim();
+                    // Find the actual URL (look for http or www)
+                    const urlMatch = afterLink.match(/(https?:\/\/[^\s]+|www\.[^\s]+)/);
+                    if (urlMatch) {
+                      eventLink = urlMatch[1];
+                      // If it starts with www, add https://
+                      if (eventLink.startsWith('www.')) {
+                        eventLink = 'https://' + eventLink;
+                      }
+                    }
+                  } else {
+                    description = detailsText;
+                  }
+                  break;
+                }
+              }
+              event = {
+                title,
+                dateTime,
+                location: fullLocation,
+                locationVenue,
+                locationAddress,
+                locationCity,
+                fullLocation,
+                description,
+                categories,
+                host,
+                image,
+                eventLink,
+                link,
+                id: link,
+                source: 'Harvard Gazette'
+              };
+            }
+          }
+          if (!event || !event.title) {
+            await detailPage.close();
+            continue;
+          }
+        }
+        
+        if (!event || !event.title) {
           await detailPage.close();
           continue;
         }
@@ -204,7 +528,12 @@ async function scrapeHarvardGazette() {
         
       } catch (err) {
         console.error('❌ Error scraping event detail:', link, err.message);
-        if (detailPage) await detailPage.close();
+        // Only close detailPage if it exists
+        if (typeof detailPage !== 'undefined' && detailPage) {
+          try { await detailPage.close(); } catch (e) {}
+        }
+        // Skip to next event on error
+        continue;
       }
     }
 

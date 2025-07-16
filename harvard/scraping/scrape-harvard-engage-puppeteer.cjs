@@ -192,12 +192,52 @@ async function scrapeHarvardEngage() {
             const loc = locEl.innerText.match(/Location[\s\n]*([\s\S]*?)(Date and Time|Description|Categories|Host Organization|RSVP|$)/i);
             if (loc && loc[1]) location = loc[1].replace(/\n+/g, ' ').trim();
           }
-          // Description (try to get the main description block)
+          // Description (try to get the main description block) - clean up and extract registration link
           let description = '';
+          let eventLink = '';
           const descEl = Array.from(document.querySelectorAll('div, section, p')).find(el => el.innerText && el.innerText.match(/Description/i));
           if (descEl) {
             const desc = descEl.innerText.match(/Description[\s\n]*([\s\S]*?)(Categories|Host Organization|Location|Date and Time|RSVP|$)/i);
-            if (desc && desc[1]) description = desc[1].replace(/\n+/g, '\n').trim();
+            if (desc && desc[1]) {
+              let rawDescription = desc[1].replace(/\n+/g, '\n').trim();
+              
+              // Remove date information from description
+              rawDescription = rawDescription.replace(/Tuesday, July \d+ 2025 at \d{1,2}:\d{2} [AP]M EDT to Tuesday, July \d+ 2025 at \d{1,2}:\d{2} [AP]M EDT/g, '');
+              rawDescription = rawDescription.replace(/Monday, July \d+ 2025 at \d{1,2}:\d{2} [AP]M EDT to Friday, July \d+ 2025 at \d{1,2}:\d{2} [AP]M EDT/g, '');
+              rawDescription = rawDescription.replace(/Friday, \w+ \d+ 2025 at \d{1,2}:\d{2} [AP]M EDT to Friday, \w+ \d+ 2025 at \d{1,2}:\d{2} [AP]M EDT/g, '');
+              rawDescription = rawDescription.replace(/Tuesday, \w+ \d+ 2025 at \d{1,2}:\d{2} [AP]M EDT to Tuesday, \w+ \d+ 2025 at \d{1,2}:\d{2} [AP]M EDT/g, '');
+              rawDescription = rawDescription.replace(/Monday, \w+ \d+ 2025 at \d{1,2}:\d{2} [AP]M EDT to Friday, \w+ \d+ 2025 at \d{1,2}:\d{2} [AP]M EDT/g, '');
+              
+              // Extract registration link - look for multiple patterns
+              let urlMatch = rawDescription.match(/(https?:\/\/[^\s]+)/);
+              if (urlMatch) {
+                eventLink = urlMatch[1];
+                // Remove the URL from description
+                rawDescription = rawDescription.replace(urlMatch[1], '').trim();
+              } else {
+                // Try to find URLs in the description text
+                const urlMatches = rawDescription.match(/(https?:\/\/[^\s"']+)/g);
+                if (urlMatches) {
+                  // Look for registration-related URLs
+                  const registrationUrl = urlMatches.find(url => 
+                    url.includes('radcliffe.harvard.edu') || 
+                    url.includes('register') || 
+                    url.includes('event') ||
+                    url.includes('harvard.edu')
+                  );
+                  if (registrationUrl) {
+                    eventLink = registrationUrl;
+                  }
+                }
+              }
+              
+              // Debug: Log if we found an event link
+              if (eventLink) {
+                console.log(`🔗 Found registration link for "${title}": ${eventLink}`);
+              }
+              
+              description = rawDescription;
+            }
           }
           // Categories (as array)
           let categories = [];
@@ -208,23 +248,33 @@ async function scrapeHarvardEngage() {
               categories = cats[1].split(/\n|,/).map(s => s.trim()).filter(Boolean);
             }
           }
-          // Host Organization
+          // Host Organization - clean up extra information
           let host = '';
           const hostEl = Array.from(document.querySelectorAll('div, section')).find(el => el.innerText && el.innerText.match(/Host Organization/i));
           if (hostEl) {
             const h = hostEl.innerText.match(/Host Organization[\s\n]*([\s\S]*?)(Categories|Description|Location|Date and Time|RSVP|$)/i);
-            if (h && h[1]) host = h[1].replace(/\n+/g, ' ').trim();
+            if (h && h[1]) {
+              let rawHost = h[1].replace(/\n+/g, ' ').trim();
+              // Remove extra event information from host field
+              rawHost = rawHost.replace(/Other events hosted by.*$/i, '').trim();
+              host = rawHost;
+            }
           }
           // Image (try to get the main event image)
           let image = '';
           const imgEl = document.querySelector('img');
           if (imgEl && imgEl.src) image = imgEl.src;
-          return { title, dateTime, location, description, categories, host, image };
+          return { title, dateTime, location, description, categories, host, image, eventLink };
         });
         // Add link and id
         event.link = link;
         event.id = link.split('/').pop();
         event.source = "Harvard Engage"; // Add source field
+        event.eventLink = event.eventLink || ''; // Ensure eventLink field exists
+        // After setting eventLink (e.g., eventLink = urlMatch[1]; or eventLink = registrationUrl;), trim trailing periods:
+        if (event.eventLink) {
+          event.eventLink = event.eventLink.replace(/\.+$/, '');
+        }
         events.push(event);
       } catch (err) {
         console.error('❌ Error scraping event detail:', link, err.message);

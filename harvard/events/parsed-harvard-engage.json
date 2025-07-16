@@ -1,34 +1,5 @@
 [
   {
-    "title": "Book Talk with Rahul Bhatia",
-    "dateTime": "Tuesday, July 15 2025 at 12:00 PM EDT to Tuesday, July 15 2025 at 1:00 PM EDT Add To Google Calendar | iCal/Outlook",
-    "location": "Online Online Location Online Location Instructions Please register for Zoom information.",
-    "description": "Book Talk with Rahul Bhatia\n \nLectures • Virtual Radcliffe Book Talks\nTuesday, July 15, 2025\n12 PM ET\nOnline on Zoom\n \nThe first installment in our series features Rahul Bhatia RI ’23, a journalist and author of The New India: The Unmaking of the World’s Largest Democracy (PublicAffairs, 2024). An independent writer, Bhatia profiles power brokers and investigates technology adoption, highlighting themes of accountability and access in India.\n \nFor more information and to register, please visit: https://www.radcliffe.harvard.edu/event/2025-book-talk-with-rahul-bhatia-virtual.",
-    "categories": [
-      "Academics"
-    ],
-    "host": "Harvard Radcliffe Institute Other events hosted by Harvard Radcliffe Institute Book Talk with Iris Bohnet Tuesday, July 22 at 12:00PM EDT Online Harvard Radcliffe Institute Book Talk with Allegra Goodman Tuesday, July 29 at 1:00PM EDT Online Harvard Radcliffe Institute Book Talk with Geraldine Brooks Tuesday, August 5 at 12:00PM EDT Online Harvard Radcliffe Institute",
-    "image": "https://se-images.campuslabs.com/clink/images/92a8b732-9a5b-45e2-8977-a0a918b465522d73a60a-ffd9-4159-9c98-61d5b5cfd290.png?preset=small-sq",
-    "link": "https://engage.gsas.harvard.edu/event/11346179",
-    "id": "11346179",
-    "source": "Harvard Engage"
-  },
-  {
-    "title": "Farmers' Market at Harvard",
-    "dateTime": "Tuesday, July 15 2025 at 11:30 AM EDT to Tuesday, July 15 2025 at 5:30 PM EDT Add To Google Calendar | iCal/Outlook",
-    "location": "Science Center Plaza 1 Oxford St., Cambridge, MA View Map",
-    "description": "Grab your shopping bag and join us at the farmers' market every Tuesday through October 28th, 11:30 a.m. - 5:30 p.m. Help support the vital local farmers and food artisans who ensure we have fresh, healthy food!\nStop by for lemonade, local mushrooms, early summer produce, eggs, microgreens, freshly baked bread, cookies, iced coffee, and more!\nThe market accepts SNAP with a weekly maximum SNAP Match of $15.\nParticipating vendors also accept HIP, WIC and Senior FMNP Coupons.",
-    "categories": [
-      "Health and Wellness",
-      "Cambridge Area"
-    ],
-    "host": "Student Center Food Literacy Other events hosted by Student Center Food Literacy Farmers' Market at Harvard Tuesday, July 22 at 11:30AM EDT Science Center Plaza Student Center Food Literacy Farmers' Market at Harvard Tuesday, July 29 at 11:30AM EDT Science Center Plaza Student Center Food Literacy Farmers' Market at Harvard Tuesday, August 5 at 11:30AM EDT Science Center Plaza Student Center Food Literacy Farmers' Market at Harvard Tuesday, August 12 at 11:30AM EDT Science Center Plaza Student Center Food Literacy",
-    "image": "https://se-images.campuslabs.com/clink/images/0d113c8e-6baa-4e61-a6b7-1744ed8920355aaec54b-d311-49b5-87b6-0148d26474be.png?preset=small-sq",
-    "link": "https://engage.gsas.harvard.edu/event/11317657",
-    "id": "11317657",
-    "source": "Harvard Engage"
-  },
-  {
     "title": "Game Guild - Open Game Night",
     "dateTime": "Friday, July 18 2025 at 6:00 PM EDT to Friday, July 18 2025 at 9:30 PM EDT Add To Google Calendar | iCal/Outlook",
     "location": "Lehman Hall - Room 204 (Grad Student Lounge) 8 Harvard Yard, Cambridge, Massachusetts View Map",
@@ -36,8 +7,9 @@
     "categories": [
       "Spouses/ partners welcome"
     ],
-    "host": "Game Guild, a Harvard Griffin GSAS Student Group Other events hosted by Game Guild, a Harvard Griffin GSAS Student Group Game Guild - Heavy Game Night Friday, July 25 at 6:00PM EDT Lehman Hall - Room 204 (Grad Student Lounge) Game Guild, a Harvard Griffin GSAS Student Group Game Guild - Open Game Night Friday, August 1 at 6:00PM EDT Lehman Hall - Room 204 (Grad Student Lounge) Game Guild, a Harvard Griffin GSAS Student Group Game Guild - Heavy Game Night Friday, August 8 at 6:00PM EDT Lehman Hall - Room 204 (Graduate Student Lounge) Game Guild, a Harvard Griffin GSAS Student Group Game Guild - Open Game Night Friday, August 15 at 6:00PM EDT Lehman Hall - Room 204 (Grad Student Lounge) Game Guild, a Harvard Griffin GSAS Student Group",
+    "host": "Game Guild, a Harvard Griffin GSAS Student Group",
     "image": "https://se-images.campuslabs.com/clink/images/2866e34a-c972-4fb2-9774-f4b7af7921050f18b880-0c9b-4d76-a410-ebe842e2053c.jpg?preset=small-sq",
+    "eventLink": "",
     "link": "https://engage.gsas.harvard.edu/event/11309502",
     "id": "11309502",
     "source": "Harvard Engage"
@@ -46,12 +18,13 @@
     "title": "Book Talk with Iris Bohnet",
     "dateTime": "Tuesday, July 22 2025 at 12:00 PM EDT to Tuesday, July 22 2025 at 1:00 PM EDT Add To Google Calendar | iCal/Outlook",
     "location": "Online Online Location Online Location Instructions Please register for Zoom information.",
-    "description": "Book Talk with Iris Bohnet\n \nLectures • Virtual Radcliffe Book Talks\nTuesday, July 22, 2025\n12 PM ET\nOnline on Zoom\n \nThe second installment in our series features Iris Bohnet, coauthor of Make Work Fair: Data-Driven Design for Real Results (Harper Business Press, 2025) with Siri Chilazi. A behavioral economist and leading voice on equity in the workplace, Bohnet advises governments and companies around the world.\n \nFor more information and to register, please visit: https://www.radcliffe.harvard.edu/event/2025-book-talk-with-iris-bohnet-virtual.",
+    "description": "Book Talk with Iris Bohnet\n \nLectures • Virtual Radcliffe Book Talks\nTuesday, July 22, 2025\n12 PM ET\nOnline on Zoom\n \nThe second installment in our series features Iris Bohnet, coauthor of Make Work Fair: Data-Driven Design for Real Results (Harper Business Press, 2025) with Siri Chilazi. A behavioral economist and leading voice on equity in the workplace, Bohnet advises governments and companies around the world.\n \nFor more information and to register, please visit:",
     "categories": [
       "Academics"
     ],
-    "host": "Harvard Radcliffe Institute Other events hosted by Harvard Radcliffe Institute Book Talk with Rahul Bhatia Tuesday, July 15 at 12:00PM EDT Online Harvard Radcliffe Institute Book Talk with Allegra Goodman Tuesday, July 29 at 1:00PM EDT Online Harvard Radcliffe Institute Book Talk with Geraldine Brooks Tuesday, August 5 at 12:00PM EDT Online Harvard Radcliffe Institute",
+    "host": "Harvard Radcliffe Institute",
     "image": "https://se-images.campuslabs.com/clink/images/92a8b732-9a5b-45e2-8977-a0a918b465522d73a60a-ffd9-4159-9c98-61d5b5cfd290.png?preset=small-sq",
+    "eventLink": "https://www.radcliffe.harvard.edu/event/2025-book-talk-with-iris-bohnet-virtual",
     "link": "https://engage.gsas.harvard.edu/event/11346181",
     "id": "11346181",
     "source": "Harvard Engage"
@@ -65,8 +38,9 @@
       "Health and Wellness",
       "Cambridge Area"
     ],
-    "host": "Student Center Food Literacy Other events hosted by Student Center Food Literacy Farmers' Market at Harvard Tuesday, July 15 at 11:30AM EDT Science Center Plaza Student Center Food Literacy Farmers' Market at Harvard Tuesday, July 29 at 11:30AM EDT Science Center Plaza Student Center Food Literacy Farmers' Market at Harvard Tuesday, August 5 at 11:30AM EDT Science Center Plaza Student Center Food Literacy Farmers' Market at Harvard Tuesday, August 12 at 11:30AM EDT Science Center Plaza Student Center Food Literacy",
+    "host": "Student Center Food Literacy",
     "image": "https://se-images.campuslabs.com/clink/images/0d113c8e-6baa-4e61-a6b7-1744ed8920355aaec54b-d311-49b5-87b6-0148d26474be.png?preset=small-sq",
+    "eventLink": "",
     "link": "https://engage.gsas.harvard.edu/event/11317658",
     "id": "11317658",
     "source": "Harvard Engage"
@@ -81,6 +55,7 @@
     ],
     "host": "Academic Resource Center",
     "image": "https://se-images.campuslabs.com/clink/images/6f2fa103-54ae-4c71-8d2c-0119b952605d6abb30c5-49e6-4ed6-abb9-1572c2e39044.png?preset=small-sq",
+    "eventLink": "",
     "link": "https://engage.gsas.harvard.edu/event/10135062",
     "id": "10135062",
     "source": "Harvard Engage"
@@ -93,8 +68,9 @@
     "categories": [
       "Spouses/ partners welcome"
     ],
-    "host": "Game Guild, a Harvard Griffin GSAS Student Group Other events hosted by Game Guild, a Harvard Griffin GSAS Student Group Game Guild - Open Game Night Friday, July 18 at 6:00PM EDT Lehman Hall - Room 204 (Grad Student Lounge) Game Guild, a Harvard Griffin GSAS Student Group Game Guild - Open Game Night Friday, August 1 at 6:00PM EDT Lehman Hall - Room 204 (Grad Student Lounge) Game Guild, a Harvard Griffin GSAS Student Group Game Guild - Heavy Game Night Friday, August 8 at 6:00PM EDT Lehman Hall - Room 204 (Graduate Student Lounge) Game Guild, a Harvard Griffin GSAS Student Group Game Guild - Open Game Night Friday, August 15 at 6:00PM EDT Lehman Hall - Room 204 (Grad Student Lounge) Game Guild, a Harvard Griffin GSAS Student Group",
+    "host": "Game Guild, a Harvard Griffin GSAS Student Group",
     "image": "https://se-images.campuslabs.com/clink/images/2866e34a-c972-4fb2-9774-f4b7af7921050f18b880-0c9b-4d76-a410-ebe842e2053c.jpg?preset=small-sq",
+    "eventLink": "",
     "link": "https://engage.gsas.harvard.edu/event/11309509",
     "id": "11309509",
     "source": "Harvard Engage"
@@ -103,12 +79,13 @@
     "title": "Book Talk with Allegra Goodman",
     "dateTime": "Tuesday, July 29 2025 at 1:00 PM EDT to Tuesday, July 29 2025 at 2:00 PM EDT Add To Google Calendar | iCal/Outlook",
     "location": "Online Online Location Online Location Instructions Please register for Zoom information.",
-    "description": "Book Talk with Allegra Goodman\n \nLectures • Virtual Radcliffe Book Talks\nTuesday, July 29, 2025\n1 PM ET\nOnline on Zoom\n \nThe third installment in our series features Allegra Goodman RI ’07, author of Isola (The Dial Press, 2025). An epic saga about a French noblewoman stranded on an island, Isola explores themes of survival, faith, and resilience.\n \nFor more information and to register, please visit: https://www.radcliffe.harvard.edu/event/2025-book-talk-with-allegra-goodman-virtual.",
+    "description": "Book Talk with Allegra Goodman\n \nLectures • Virtual Radcliffe Book Talks\nTuesday, July 29, 2025\n1 PM ET\nOnline on Zoom\n \nThe third installment in our series features Allegra Goodman RI ’07, author of Isola (The Dial Press, 2025). An epic saga about a French noblewoman stranded on an island, Isola explores themes of survival, faith, and resilience.\n \nFor more information and to register, please visit:",
     "categories": [
       "Academics"
     ],
-    "host": "Harvard Radcliffe Institute Other events hosted by Harvard Radcliffe Institute Book Talk with Rahul Bhatia Tuesday, July 15 at 12:00PM EDT Online Harvard Radcliffe Institute Book Talk with Iris Bohnet Tuesday, July 22 at 12:00PM EDT Online Harvard Radcliffe Institute Book Talk with Geraldine Brooks Tuesday, August 5 at 12:00PM EDT Online Harvard Radcliffe Institute",
+    "host": "Harvard Radcliffe Institute",
     "image": "https://se-images.campuslabs.com/clink/images/92a8b732-9a5b-45e2-8977-a0a918b465522d73a60a-ffd9-4159-9c98-61d5b5cfd290.png?preset=small-sq",
+    "eventLink": "https://www.radcliffe.harvard.edu/event/2025-book-talk-with-allegra-goodman-virtual",
     "link": "https://engage.gsas.harvard.edu/event/11346184",
     "id": "11346184",
     "source": "Harvard Engage"
@@ -122,8 +99,9 @@
       "Health and Wellness",
       "Cambridge Area"
     ],
-    "host": "Student Center Food Literacy Other events hosted by Student Center Food Literacy Farmers' Market at Harvard Tuesday, July 15 at 11:30AM EDT Science Center Plaza Student Center Food Literacy Farmers' Market at Harvard Tuesday, July 22 at 11:30AM EDT Science Center Plaza Student Center Food Literacy Farmers' Market at Harvard Tuesday, August 5 at 11:30AM EDT Science Center Plaza Student Center Food Literacy Farmers' Market at Harvard Tuesday, August 12 at 11:30AM EDT Science Center Plaza Student Center Food Literacy",
+    "host": "Student Center Food Literacy",
     "image": "https://se-images.campuslabs.com/clink/images/0d113c8e-6baa-4e61-a6b7-1744ed8920355aaec54b-d311-49b5-87b6-0148d26474be.png?preset=small-sq",
+    "eventLink": "",
     "link": "https://engage.gsas.harvard.edu/event/11317659",
     "id": "11317659",
     "source": "Harvard Engage"
@@ -136,8 +114,9 @@
     "categories": [
       "Spouses/ partners welcome"
     ],
-    "host": "Game Guild, a Harvard Griffin GSAS Student Group Other events hosted by Game Guild, a Harvard Griffin GSAS Student Group Game Guild - Open Game Night Friday, July 18 at 6:00PM EDT Lehman Hall - Room 204 (Grad Student Lounge) Game Guild, a Harvard Griffin GSAS Student Group Game Guild - Heavy Game Night Friday, July 25 at 6:00PM EDT Lehman Hall - Room 204 (Grad Student Lounge) Game Guild, a Harvard Griffin GSAS Student Group Game Guild - Heavy Game Night Friday, August 8 at 6:00PM EDT Lehman Hall - Room 204 (Graduate Student Lounge) Game Guild, a Harvard Griffin GSAS Student Group Game Guild - Open Game Night Friday, August 15 at 6:00PM EDT Lehman Hall - Room 204 (Grad Student Lounge) Game Guild, a Harvard Griffin GSAS Student Group",
+    "host": "Game Guild, a Harvard Griffin GSAS Student Group",
     "image": "https://se-images.campuslabs.com/clink/images/2866e34a-c972-4fb2-9774-f4b7af7921050f18b880-0c9b-4d76-a410-ebe842e2053c.jpg?preset=small-sq",
+    "eventLink": "",
     "link": "https://engage.gsas.harvard.edu/event/11309503",
     "id": "11309503",
     "source": "Harvard Engage"
@@ -146,12 +125,13 @@
     "title": "Book Talk with Geraldine Brooks",
     "dateTime": "Tuesday, August 5 2025 at 12:00 PM EDT to Tuesday, August 5 2025 at 1:00 PM EDT Add To Google Calendar | iCal/Outlook",
     "location": "Online Online Location Online Location Instructions Please register for Zoom information.",
-    "description": "Book Talk with Geraldine Brooks\nLectures • Virtual Radcliffe Book Talks\nTuesday, August 5, 2025\n12 PM ET\nOnline on Zoom\n \n \nThe fourth and final installment in our series features Geraldine Brooks RI ’06, author of Memorial Days: A Memoir (Viking, 2025). A Pulitzer Prize–winning novelist, nonfiction writer, and former foreign correspondent, Brooks blends personal narrative and historical reflection in this meditation on grief, war, and memory, written in the wake of the death of her husband, the writer Tony Horwitz RI ’06, also a Pulitzer-prize winner.\n \n \n \nFor more information and to register, please visit: https://www.radcliffe.harvard.edu/event/2025-book-talk-with-geraldine-brooks-virtual.",
+    "description": "Book Talk with Geraldine Brooks\nLectures • Virtual Radcliffe Book Talks\nTuesday, August 5, 2025\n12 PM ET\nOnline on Zoom\n \n \nThe fourth and final installment in our series features Geraldine Brooks RI ’06, author of Memorial Days: A Memoir (Viking, 2025). A Pulitzer Prize–winning novelist, nonfiction writer, and former foreign correspondent, Brooks blends personal narrative and historical reflection in this meditation on grief, war, and memory, written in the wake of the death of her husband, the writer Tony Horwitz RI ’06, also a Pulitzer-prize winner.\n \n \n \nFor more information and to register, please visit:",
     "categories": [
       "Academics"
     ],
-    "host": "Harvard Radcliffe Institute Other events hosted by Harvard Radcliffe Institute Book Talk with Rahul Bhatia Tuesday, July 15 at 12:00PM EDT Online Harvard Radcliffe Institute Book Talk with Iris Bohnet Tuesday, July 22 at 12:00PM EDT Online Harvard Radcliffe Institute Book Talk with Allegra Goodman Tuesday, July 29 at 1:00PM EDT Online Harvard Radcliffe Institute",
+    "host": "Harvard Radcliffe Institute",
     "image": "https://se-images.campuslabs.com/clink/images/92a8b732-9a5b-45e2-8977-a0a918b465522d73a60a-ffd9-4159-9c98-61d5b5cfd290.png?preset=small-sq",
+    "eventLink": "https://www.radcliffe.harvard.edu/event/2025-book-talk-with-geraldine-brooks-virtual",
     "link": "https://engage.gsas.harvard.edu/event/11346185",
     "id": "11346185",
     "source": "Harvard Engage"
@@ -165,8 +145,9 @@
       "Health and Wellness",
       "Cambridge Area"
     ],
-    "host": "",
-    "image": "",
+    "host": "Student Center Food Literacy",
+    "image": "https://se-images.campuslabs.com/clink/images/0d113c8e-6baa-4e61-a6b7-1744ed8920355aaec54b-d311-49b5-87b6-0148d26474be.png?preset=small-sq",
+    "eventLink": "",
     "link": "https://engage.gsas.harvard.edu/event/11317660",
     "id": "11317660",
     "source": "Harvard Engage"
@@ -181,6 +162,7 @@
     ],
     "host": "Interdisciplinary Discussion on Disease and Health, a Harvard Griffin GSAS Student Group",
     "image": "https://se-images.campuslabs.com/clink/images/29a8413b-13f1-40aa-bdb1-3f040d3c6f914aa5da7f-1bdb-4759-8161-6134a9136ada.jpg?preset=small-sq",
+    "eventLink": "",
     "link": "https://engage.gsas.harvard.edu/event/10774039",
     "id": "10774039",
     "source": "Harvard Engage"
@@ -193,8 +175,9 @@
     "categories": [
       "Spouses/ partners welcome"
     ],
-    "host": "Game Guild, a Harvard Griffin GSAS Student Group Other events hosted by Game Guild, a Harvard Griffin GSAS Student Group Game Guild - Open Game Night Friday, July 18 at 6:00PM EDT Lehman Hall - Room 204 (Grad Student Lounge) Game Guild, a Harvard Griffin GSAS Student Group Game Guild - Heavy Game Night Friday, July 25 at 6:00PM EDT Lehman Hall - Room 204 (Grad Student Lounge) Game Guild, a Harvard Griffin GSAS Student Group Game Guild - Open Game Night Friday, August 1 at 6:00PM EDT Lehman Hall - Room 204 (Grad Student Lounge) Game Guild, a Harvard Griffin GSAS Student Group Game Guild - Open Game Night Friday, August 15 at 6:00PM EDT Lehman Hall - Room 204 (Grad Student Lounge) Game Guild, a Harvard Griffin GSAS Student Group",
+    "host": "Game Guild, a Harvard Griffin GSAS Student Group",
     "image": "https://se-images.campuslabs.com/clink/images/2866e34a-c972-4fb2-9774-f4b7af7921050f18b880-0c9b-4d76-a410-ebe842e2053c.jpg?preset=small-sq",
+    "eventLink": "",
     "link": "https://engage.gsas.harvard.edu/event/11309510",
     "id": "11309510",
     "source": "Harvard Engage"
@@ -208,8 +191,9 @@
       "Health and Wellness",
       "Cambridge Area"
     ],
-    "host": "Student Center Food Literacy Other events hosted by Student Center Food Literacy Farmers' Market at Harvard Tuesday, July 15 at 11:30AM EDT Science Center Plaza Student Center Food Literacy Farmers' Market at Harvard Tuesday, July 22 at 11:30AM EDT Science Center Plaza Student Center Food Literacy Farmers' Market at Harvard Tuesday, July 29 at 11:30AM EDT Science Center Plaza Student Center Food Literacy Farmers' Market at Harvard Tuesday, August 5 at 11:30AM EDT Science Center Plaza Student Center Food Literacy",
+    "host": "Student Center Food Literacy",
     "image": "https://se-images.campuslabs.com/clink/images/0d113c8e-6baa-4e61-a6b7-1744ed8920355aaec54b-d311-49b5-87b6-0148d26474be.png?preset=small-sq",
+    "eventLink": "",
     "link": "https://engage.gsas.harvard.edu/event/11317661",
     "id": "11317661",
     "source": "Harvard Engage"
@@ -222,8 +206,9 @@
     "categories": [
       "Spouses/ partners welcome"
     ],
-    "host": "Game Guild, a Harvard Griffin GSAS Student Group Other events hosted by Game Guild, a Harvard Griffin GSAS Student Group Game Guild - Open Game Night Friday, July 18 at 6:00PM EDT Lehman Hall - Room 204 (Grad Student Lounge) Game Guild, a Harvard Griffin GSAS Student Group Game Guild - Heavy Game Night Friday, July 25 at 6:00PM EDT Lehman Hall - Room 204 (Grad Student Lounge) Game Guild, a Harvard Griffin GSAS Student Group Game Guild - Open Game Night Friday, August 1 at 6:00PM EDT Lehman Hall - Room 204 (Grad Student Lounge) Game Guild, a Harvard Griffin GSAS Student Group Game Guild - Heavy Game Night Friday, August 8 at 6:00PM EDT Lehman Hall - Room 204 (Graduate Student Lounge) Game Guild, a Harvard Griffin GSAS Student Group",
+    "host": "Game Guild, a Harvard Griffin GSAS Student Group",
     "image": "https://se-images.campuslabs.com/clink/images/2866e34a-c972-4fb2-9774-f4b7af7921050f18b880-0c9b-4d76-a410-ebe842e2053c.jpg?preset=small-sq",
+    "eventLink": "",
     "link": "https://engage.gsas.harvard.edu/event/11309504",
     "id": "11309504",
     "source": "Harvard Engage"
@@ -237,8 +222,9 @@
       "Health and Wellness",
       "Cambridge Area"
     ],
-    "host": "Student Center Food Literacy Other events hosted by Student Center Food Literacy Farmers' Market at Harvard Tuesday, July 15 at 11:30AM EDT Science Center Plaza Student Center Food Literacy Farmers' Market at Harvard Tuesday, July 22 at 11:30AM EDT Science Center Plaza Student Center Food Literacy Farmers' Market at Harvard Tuesday, July 29 at 11:30AM EDT Science Center Plaza Student Center Food Literacy Farmers' Market at Harvard Tuesday, August 5 at 11:30AM EDT Science Center Plaza Student Center Food Literacy",
+    "host": "Student Center Food Literacy",
     "image": "https://se-images.campuslabs.com/clink/images/0d113c8e-6baa-4e61-a6b7-1744ed8920355aaec54b-d311-49b5-87b6-0148d26474be.png?preset=small-sq",
+    "eventLink": "",
     "link": "https://engage.gsas.harvard.edu/event/11317662",
     "id": "11317662",
     "source": "Harvard Engage"

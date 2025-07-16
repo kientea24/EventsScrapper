@@ -27,6 +27,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from "@/components/ui/sheet";
+import EventPanel from "./EventPanel";
 
 interface Program {
   id: string;
@@ -850,101 +851,31 @@ const ProgramCard = ({ program }: ProgramCardProps) => {
   );
 };
 
-interface EventCardProps {
-  program: Program;
+interface EmptyStateProps {
+  message: string;
 }
 
-const EventCard = ({ program }: EventCardProps) => {
+const EmptyState = ({ message }: EmptyStateProps) => {
   return (
-    <Card className="bg-white border-gray-200 hover:shadow-md transition-shadow">
-      <CardContent className="p-6">
-        <div className="flex gap-4">
-          <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
-            <img
-              src={program.image}
-              alt={program.title}
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <div className="flex-1">
-            <div className="flex items-start justify-between mb-2">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                  {program.title}
-                </h3>
-                <div className="flex items-center text-sm text-gray-600 mb-1">
-                  <Calendar className="h-4 w-4 mr-1" />
-                  <span>{program.dates}</span>
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <MapPin className="h-4 w-4 mr-1" />
-                  <span>{program.location}</span>
-                </div>
-              </div>
-              <Button
-                size="sm"
-                className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white"
-                onClick={() => {
-                  if (program.weblink) {
-                    window.open(program.weblink, '_blank');
-                  } else if (program.link) {
-                    window.open(program.link, '_blank');
-                  }
-                }}
-              >
-                {program.weblink || program.link ? 'View Details' : 'Register'}
-              </Button>
-            </div>
-            <p className="text-sm text-gray-700 mb-3">{program.description}</p>
-            
-            {/* Additional Harvard event information */}
-            {(program.cost || program.organization) && (
-              <div className="text-xs text-gray-500 mb-2 space-y-1">
-                {program.cost && (
-                  <div><strong>Cost:</strong> {program.cost.replace(/&nbsp;/g, ' ')}</div>
-                )}
-                {program.organization && (
-                  <div><strong>Organization:</strong> {program.organization.replace(/&nbsp;/g, ' ')}</div>
-                )}
-              </div>
-            )}
-            
-            <div className="flex flex-wrap gap-2">
-              {/* Source badge */}
-              {program.source && (
-                <Badge
-                  variant="outline"
-                  className="bg-blue-50 text-blue-700 border-blue-200 text-xs font-medium"
-                >
-                  {program.source}
-                </Badge>
-              )}
-              {/* Event tags */}
-              {program.tags.map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="outline"
-                  className="bg-purple-50 text-purple-700 border-purple-200 text-xs"
-                >
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-gray-50 rounded-lg border border-gray-200">
+      <div className="h-24 w-24 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+        <Search className="h-12 w-12 text-gray-400" />
+      </div>
+      <h3 className="text-lg font-medium text-gray-900 mb-2">
+        No Results Found
+      </h3>
+      <p className="text-gray-600 max-w-md">{message}</p>
+    </div>
   );
 };
 
+// --- Minimalist TimelineEventCard with location popover and controls ---
 interface TimelineEventCardProps {
   program: Program;
   isLast: boolean;
-  onEdit?: (program: Program) => void;
-  onDelete?: (programId: string) => void;
+  onDelete?: (id: string) => void;
 }
 
-// --- Minimalist TimelineEventCard with location popover and controls ---
 const TimelineEventCard = ({ program, isLast, onDelete }: TimelineEventCardProps) => {
   const [open, setOpen] = useState(false);
   const isTBD = !program.time || program.time.trim().toLowerCase() === 'tbd';
@@ -1086,118 +1017,16 @@ const TimelineEventCard = ({ program, isLast, onDelete }: TimelineEventCardProps
           </div>
         </div>
       </div>
-      {/* Event Details Sheet */}
+      {/* Event Details Sheet (now uses EventPanel) */}
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="max-w-lg w-full p-0 bg-white overflow-y-auto">
-          <div className="flex flex-col h-full">
-            {/* Header with image and close */}
-            <div className="relative h-56 w-full bg-gray-100">
-              <img src={program.image} alt={program.title} className="w-full h-full object-cover" />
-              <SheetClose asChild>
-                <button className="absolute top-4 right-4 bg-white/80 hover:bg-white rounded-full p-1 shadow" aria-label="Close">
-                  <X className="h-5 w-5 text-gray-700" />
-                </button>
-              </SheetClose>
-            </div>
-            <div className="p-6 flex-1 flex flex-col gap-4">
-              {/* Title and meta */}
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">{program.title}</h2>
-                <div className="flex items-center gap-2 text-sm text-gray-600 mb-2 flex-wrap">
-                  <Calendar className="h-4 w-4 text-purple-500" />
-                  <span>{program.dates}</span>
-                  {!isTBD && <>
-                    <span className="mx-1">•</span>
-                    <Clock className="h-4 w-4 text-purple-500" />
-                    <span>{program.time}</span>
-                  </>}
-                  <MapPin className="h-4 w-4 text-purple-500" />
-                  {program.source && program.source.toLowerCase().includes('engage') ? (
-                    <span className="flex flex-col">
-                      {locationVenue && <span>{locationVenue}</span>}
-                      {locationAddress && <span>{locationAddress}</span>}
-                      {showMapLink && locationMapUrl && (
-                        <a href={locationMapUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline text-sm">
-                          View Map
-                        </a>
-                      )}
-                    </span>
-                  ) : program.source && program.source.toLowerCase().includes('gazette') ? (
-                    program.locationVenue || program.locationAddress || program.locationCity ? (
-                      <span className="flex flex-col">
-                        {program.locationVenue && <span>{program.locationVenue}</span>}
-                        {program.locationAddress && <span>{program.locationAddress}</span>}
-                        {program.locationCity && <span>{program.locationCity}</span>}
-                      </span>
-                    ) : locationVenue && locationAddress ? (
-                      <span className="flex flex-col">
-                        {locationVenue && <span>{locationVenue}</span>}
-                        {locationAddress && <span>{locationAddress}</span>}
-                        {program.locationCity && <span>{program.locationCity}</span>}
-                      </span>
-                    ) : (
-                      <span>{locationDisplay}</span>
-                    )
-                  ) : (
-                    <span>{program.location}</span>
-                  )}
-                </div>
-              </div>
-              {/* Host/organization (mock if missing) */}
-              <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                <Users className="h-4 w-4 text-purple-400" />
-                <span>Hosted by {program.organization || 'Harvard Events Team'}</span>
-              </div>
-              {/* Description */}
-              <div>
-                <h3 className="text-base font-semibold text-gray-800 mb-1">About Event</h3>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-line">{program.description}</p>
-              </div>
-              {/* Tags/categories */}
-              {program.tags && program.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {program.tags.map((tag) => (
-                    <span key={tag} className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-xs font-medium border border-purple-100">{tag}</span>
-                  ))}
-                </div>
-              )}
-              {/* Register/View Details button */}
-              {(program.weblink || program.link) && (
-                <a
-                  href={program.weblink || program.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-4 inline-block px-4 py-2 rounded bg-gradient-to-r from-purple-500 to-pink-500 text-white text-sm font-semibold hover:from-purple-600 hover:to-pink-600 focus:outline-none"
-                >
-                  View Event Page
-                </a>
-              )}
-            </div>
-          </div>
+          <EventPanel event={program} />
         </SheetContent>
       </Sheet>
     </>
   );
 };
 // --- END Minimalist TimelineEventCard with location popover and controls ---
-
-interface EmptyStateProps {
-  message: string;
-}
-
-const EmptyState = ({ message }: EmptyStateProps) => {
-  return (
-    <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-gray-50 rounded-lg border border-gray-200">
-      <div className="h-24 w-24 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-        <Search className="h-12 w-12 text-gray-400" />
-      </div>
-      <h3 className="text-lg font-medium text-gray-900 mb-2">
-        No Results Found
-      </h3>
-      <p className="text-gray-600 max-w-md">{message}</p>
-    </div>
-  );
-};
 
 // --- Grouping and rendering logic update ---
 // When rendering events for a day, group TBD events first (no time), then timed events sorted by time

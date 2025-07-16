@@ -13,6 +13,7 @@ function getCurrentDateForFiltering() {
   const currentDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   
   console.log(`📅 Current date detected: ${currentDate.toLocaleDateString()}`);
+  console.log(`📅 Current date (ISO): ${currentDate.toISOString()}`);
   return currentDate;
 }
 
@@ -24,11 +25,11 @@ function parseEventDate(dateString) {
   const patterns = [
     // Harvard Engage format: "Tuesday, July 8 at 11:30AM EDT"
     /([A-Za-z]+,\s*[A-Za-z]+\s+\d{1,2}\s+at\s+\d{1,2}:\d{2}[AP]M\s+[A-Z]+)/,
-    // Harvard Gazette format: "July 15, 2024"
+    // Harvard Gazette format: "July 15, 2025"
     /([A-Za-z]+\s+\d{1,2},?\s+\d{4})/,
     // Other formats
-    /(\d{1,2}\/\d{1,2}\/\d{4})/, // "7/15/2024"
-    /(\d{4}-\d{2}-\d{2})/, // "2024-07-15"
+    /(\d{1,2}\/\d{1,2}\/\d{4})/, // "7/15/2025"
+    /(\d{4}-\d{2}-\d{2})/, // "2025-07-15"
   ];
   
   for (const pattern of patterns) {
@@ -43,7 +44,8 @@ function parseEventDate(dateString) {
         // Remove day of week if present
         const dateMatch = datePart.match(/([A-Za-z]+\s+\d{1,2})/);
         if (dateMatch) {
-          dateToParse = dateMatch[1] + ', 2025'; // Add current year
+          const currentYear = new Date().getFullYear();
+          dateToParse = dateMatch[1] + ', ' + currentYear; // Add current year
         }
       }
       
@@ -65,7 +67,7 @@ async function combineAllEvents() {
   
   // 1. Load Harvard Gazette events
   try {
-    const gazettePath = path.join(__dirname, 'parsed-harvard-events.json');
+    const gazettePath = path.join(__dirname, 'parsed-harvard-gazette.json');
     if (fs.existsSync(gazettePath)) {
       const gazetteEvents = JSON.parse(fs.readFileSync(gazettePath, 'utf8'));
       console.log(`📰 Loaded ${gazetteEvents.length} Harvard Gazette events`);
@@ -101,7 +103,7 @@ async function combineAllEvents() {
   const eventMap = new Map();
   for (const event of allEvents) {
     // Normalize date to handle different formats
-    let normDate = (event.dates || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    let normDate = (event.dates || event.dateTime || '').replace(/\s+/g, ' ').trim().toLowerCase();
     
     // Handle Harvard Engage format: "Tuesday, July 8 at 11:30AM EDT" -> "july 8"
     const engageMatch = normDate.match(/([a-z]+ \d{1,2})/);
@@ -159,7 +161,7 @@ async function combineAllEvents() {
   // FINAL DEDUPLICATION: Remove any remaining duplicates across all sources (including Engage self-dupes)
   const finalEventMap = new Map();
   for (const event of dedupedEvents) {
-    let normDate = (event.dates || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    let normDate = (event.dates || event.dateTime || '').replace(/\s+/g, ' ').trim().toLowerCase();
     // Normalize Engage and Gazette date formats
     const engageMatch = normDate.match(/([a-z]+ \d{1,2})/);
     if (engageMatch) normDate = engageMatch[1];
@@ -177,14 +179,17 @@ async function combineAllEvents() {
 
   const filteredEvents = finalDedupedEvents
     .filter(event => {
+      // Use dateTime field if dates field doesn't exist
+      const dateField = event.dates || event.dateTime || '';
+      
       // Keep events with TBD dates (ongoing events)
-      if (!event.dates || event.dates === 'TBD') {
+      if (!dateField || dateField === 'TBD') {
         console.log(`✅ Keeping event with TBD date: ${event.title}`);
         return true;
       }
       
       // Try to parse the date using the improved parseEventDate function
-      const eventDate = parseEventDate(event.dates);
+      const eventDate = parseEventDate(dateField);
       if (eventDate) {
         eventDate.setHours(0, 0, 0, 0);
         
@@ -192,9 +197,9 @@ async function combineAllEvents() {
         const isFromTodayOnwards = eventDate >= today;
         
         if (!isFromTodayOnwards) {
-          console.log(`❌ Filtered out past event: ${event.title} (${event.dates})`);
+          console.log(`❌ Filtered out past event: ${event.title} (${event.dates}) - Date: ${eventDate.toLocaleDateString()}`);
         } else {
-          console.log(`✅ Keeping current event: ${event.title} (${event.dates})`);
+          console.log(`✅ Keeping current event: ${event.title} (${event.dates}) - Date: ${eventDate.toLocaleDateString()}`);
         }
         
         return isFromTodayOnwards;

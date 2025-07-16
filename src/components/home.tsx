@@ -162,7 +162,8 @@ const Home = ({ initialSignedInState = false }) => {
         weblink: event.weblink || event.link || '#',
         cost: event.cost || '',
         organization: event.organization || '',
-        source: event.source || 'Harvard Event'
+        source: event.source || 'Harvard Event',
+        eventLink: event.eventLink || '',
       };
 
       // Apply source-specific mapping
