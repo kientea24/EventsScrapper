@@ -130,14 +130,18 @@ async function scrapeHarvardEngage() {
     });
     console.log(`🔗 Found ${eventLinks.length} event links.`);
 
+    // Limit to 5 events for testing
+    const limitedEventLinks = eventLinks.slice(0, 5);
+    console.log(`🔢 Limiting to ${limitedEventLinks.length} events for testing`);
+
     // Visit each event detail page and extract required fields
     const events = [];
     // Scrape each event detail page
-    console.log(`🔍 Scraping ${eventLinks.length} event detail pages...`);
+    console.log(`🔍 Scraping ${limitedEventLinks.length} event detail pages...`);
     
-    for (let i = 0; i < eventLinks.length; i++) {
-      const link = eventLinks[i];
-      console.log(`📄 Scraping event ${i + 1}/${eventLinks.length}: ${link}`);
+    for (let i = 0; i < limitedEventLinks.length; i++) {
+      const link = limitedEventLinks[i];
+      console.log(`📄 Scraping event ${i + 1}/${limitedEventLinks.length}: ${link}`);
       
       try {
         // Add delay between requests to avoid rate limiting
