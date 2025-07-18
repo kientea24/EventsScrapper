@@ -32,3 +32,11 @@ core
 
 .github/
 
+# Supabase
+.env
+.env.local
+.env.production
+.env.staging
+supabase/.temp
+supabase/config.toml
+
