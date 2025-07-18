@@ -4,7 +4,6 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "predev": "node harvard/scraping/scrape-harvard-engage-puppeteer.cjs && node harvard/scraping/scrape-harvard-gazette-puppeteer.cjs && node harvard/events/combine-all-events.js",
     "dev": "vite",
     "build": "tsc ; vite build",
     "build-no-errors": "tsc ; vite build",
