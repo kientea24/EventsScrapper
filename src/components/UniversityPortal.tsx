@@ -78,73 +78,10 @@ const UniversityPortal = ({
     "University of Chicago",
   ];
 
-  const defaultPrograms: Program[] = [
-    {
-      id: "1",
-      title: "Semester in Paris",
-      university: "Harvard University",
-      location: "Paris, France",
-      dates: "Fall 2023",
-      description:
-        "Immerse yourself in French culture while studying at Sciences Po Paris. Open to all liberal arts majors.",
-      image:
-        "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600&q=80",
-      type: "study",
-      tags: ["Europe", "Language", "Liberal Arts"],
-    },
-    {
-      id: "2",
-      title: "Marine Biology Research",
-      university: "Harvard University",
-      location: "Great Barrier Reef, Australia",
-      dates: "Summer 2023",
-      description:
-        "Join our research team studying coral reef conservation and marine ecosystems.",
-      image:
-        "https://images.unsplash.com/photo-1582967788606-a171c1080cb0?w=600&q=80",
-      type: "research",
-      tags: ["Science", "Environmental", "Field Work"],
-    },
-    {
-      id: "4",
-      title: "Tokyo Tech Exchange",
-      university: "Harvard University",
-      location: "Tokyo, Japan",
-      dates: "Spring 2023",
-      description:
-        "Study engineering and computer science at one of Japan's premier technical institutions.",
-      image:
-        "https://images.unsplash.com/photo-1536098561742-ca998e48cbcc?w=600&q=80",
-      type: "study",
-      tags: ["Asia", "Engineering", "Tech"],
-    },
-    {
-      id: "5",
-      title: "Climate Change Research Initiative",
-      university: "Harvard University",
-      location: "Multiple Locations",
-      dates: "Year-round",
-      description:
-        "Participate in ongoing climate research with opportunities for field work and data analysis.",
-      image:
-        "https://images.unsplash.com/photo-1569950044272-a6fe7c9957a1?w=600&q=80",
-      type: "research",
-      tags: ["Environmental", "Data Science", "Global"],
-    },
-  ];
-
-  // Combine default programs with external events
-  const [allPrograms, setAllPrograms] = useState<Program[]>(defaultPrograms);
-
+  // Use only externalEvents (from Supabase) as the event source
+  const [allPrograms, setAllPrograms] = useState<Program[]>([]);
   useEffect(() => {
-    try {
-      if (externalEvents.length > 0) {
-        console.log(`Adding ${externalEvents.length} external events to portal`);
-        setAllPrograms((prev) => [...prev, ...externalEvents]);
-      }
-    } catch (error) {
-      console.error('Error setting external events:', error);
-    }
+    setAllPrograms(externalEvents || []);
   }, [externalEvents]);
 
   // Helper function to parse dates for sorting
@@ -860,12 +797,12 @@ const EmptyState = ({ message }: EmptyStateProps) => {
     <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-gray-50 rounded-lg border border-gray-200">
       <div className="h-24 w-24 rounded-full bg-gray-100 flex items-center justify-center mb-4">
         <Search className="h-12 w-12 text-gray-400" />
-      </div>
+          </div>
       <h3 className="text-lg font-medium text-gray-900 mb-2">
         No Results Found
-      </h3>
+                </h3>
       <p className="text-gray-600 max-w-md">{message}</p>
-    </div>
+                </div>
   );
 };
 
@@ -899,7 +836,7 @@ const TimelineEventCard = ({ program, isLast, onDelete }: TimelineEventCardProps
           locationAddress = mapParts[0].trim();
           locationMapUrl = `https://maps.google.com/?q=${encodeURIComponent(locationAddress)}`;
           showMapLink = true;
-        }
+    }
       } else {
         locationDisplay = locationDisplay.replace(/\b(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b/gi, '').trim();
         const match = locationDisplay.match(/^[^\d,\n<]+/);
@@ -928,7 +865,7 @@ const TimelineEventCard = ({ program, isLast, onDelete }: TimelineEventCardProps
         locationAddress = mapParts[0].trim();
         locationMapUrl = `https://maps.google.com/?q=${encodeURIComponent(locationAddress)}`;
         showMapLink = true;
-      }
+    }
     }
   }
   // For Engage and all other events, show full address as is (do not modify, do not split)
@@ -939,15 +876,15 @@ const TimelineEventCard = ({ program, isLast, onDelete }: TimelineEventCardProps
         <div className="relative flex flex-col items-center" style={{ width: 48, minWidth: 48 }}>
           {/* Vertical timeline line (runs full height except for last event) */}
           <div className="absolute left-1/2 top-0 w-1 h-full bg-gradient-to-b from-purple-200 to-pink-100" style={{ transform: 'translateX(-50%)', zIndex: 0, borderRadius: 2, opacity: 0.7 }} />
-          {/* Timeline dot */}
+      {/* Timeline dot */}
           <div className="relative z-10 mt-2 mb-1">
             <div className="h-4 w-4 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center shadow" />
-          </div>
+        </div>
           {/* Time badge (if not TBD) */}
           {!isTBD && (
             <div className="relative z-10 px-2 py-0.5 rounded bg-white border border-purple-200 text-purple-700 font-semibold text-xs shadow-sm mt-1 mb-2">
               {program.time}
-            </div>
+      </div>
           )}
         </div>
         {/* Event content and location, grid layout for alignment */}
@@ -955,11 +892,11 @@ const TimelineEventCard = ({ program, isLast, onDelete }: TimelineEventCardProps
           {/* Main event info */}
           <div className="flex items-center bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-150 p-2 gap-3 min-h-[64px]">
             {/* Small event image */}
-            <img
-              src={program.image}
-              alt={program.title}
+              <img
+                src={program.image}
+                alt={program.title}
               className="w-12 h-12 object-cover rounded-md flex-shrink-0 border border-gray-100"
-            />
+              />
             {/* Details */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
@@ -970,17 +907,17 @@ const TimelineEventCard = ({ program, isLast, onDelete }: TimelineEventCardProps
                   tabIndex={0}
                   type="button"
                 >
-                  {program.title}
+                        {program.title}
                 </button>
-              </div>
+                      </div>
               {/* Date (if not TBD) */}
               {!isTBD && (
                 <span className="text-xs text-gray-500 font-medium mr-2">{program.dates}</span>
               )}
               {/* Minimal description, 1-2 lines only */}
               <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">{program.description}</p>
-            </div>
-          </div>
+                        </div>
+                      </div>
           {/* Location column, vertically padded, always wraps, never truncates */}
           <div className="flex flex-col justify-center items-start px-3 py-3 bg-white border border-gray-200 rounded-lg min-w-[120px] max-w-[220px] text-xs text-blue-800 font-medium whitespace-pre-line break-words" style={{minHeight: '2.2em'}}>
             {program.source && program.source.toLowerCase().includes('engage') ? (
@@ -1003,20 +940,20 @@ const TimelineEventCard = ({ program, isLast, onDelete }: TimelineEventCardProps
               )
             ) : (
               <span>{program.location}</span>
-            )}
-          </div>
+                  )}
+                </div>
           {/* Delete button, vertically centered */}
           <div className="flex items-center h-full">
             <button
               className="px-2 py-1 rounded border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50 focus:outline-none"
               onClick={() => onDelete && onDelete(program.id)}
               type="button"
-            >
-              Delete
+                        >
+                          Delete
             </button>
-          </div>
-        </div>
-      </div>
+                      </div>
+                </div>
+              </div>
       {/* Event Details Sheet (now uses EventPanel) */}
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="max-w-lg w-full p-0 bg-white overflow-y-auto">

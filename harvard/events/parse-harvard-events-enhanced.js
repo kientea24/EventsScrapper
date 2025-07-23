@@ -1,101 +1,157 @@
-import fs from 'fs';
 import { DOMParser } from '@xmldom/xmldom';
+import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import fetch from 'node-fetch';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Smart function to get the most current date for filtering
+// Helper function to get current date for filtering
 function getCurrentDateForFiltering() {
   const now = new Date();
-  
-  // Get current date in local timezone
-  const currentDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  
-  console.log(`📅 Current date detected: ${currentDate.toLocaleDateString()}`);
-  return currentDate;
+  // Set to beginning of current day
+  now.setHours(0, 0, 0, 0);
+  return now;
 }
 
-// Helper function to parse event date and check if it's from today onwards
+// Helper function to check if event date is from today onwards
 function isEventFromTodayOnwards(eventDate) {
-  if (!eventDate) return false;
+  if (!eventDate || eventDate === 'undefined' || eventDate === 'TBD') {
+    return true; // Include events with no date
+  }
   
   const today = getCurrentDateForFiltering();
-  today.setHours(0, 0, 0, 0);
   
-  // Try to parse the event date
-  const dateMatch = eventDate.match(/([A-Za-z]+ \d{1,2},? \d{4})/);
-  if (dateMatch) {
-    const parsedDate = new Date(dateMatch[1]);
-    parsedDate.setHours(0, 0, 0, 0);
-    const isFromTodayOnwards = parsedDate >= today;
-    
-    if (!isFromTodayOnwards) {
-      console.log(`❌ Filtered out past event: ${eventDate} (before ${today.toLocaleDateString()})`);
+  // Try to parse various date formats
+  const dateFormats = [
+    /([A-Za-z]+ \d{1,2},? \d{4})/,
+    /(\d{1,2}\/\d{1,2}\/\d{4})/,
+    /(\d{4}-\d{2}-\d{2})/,
+    /([A-Za-z]+ \d{1,2} \d{4})/,
+    /(\d{1,2} [A-Za-z]+ \d{4})/
+  ];
+  
+  for (const format of dateFormats) {
+    const match = eventDate.match(format);
+    if (match) {
+      try {
+        const eventDateObj = new Date(match[1]);
+        if (isNaN(eventDateObj.getTime())) continue;
+        
+        // Set to beginning of day for comparison
+        eventDateObj.setHours(0, 0, 0, 0);
+        
+        console.log(`📅 Current date detected: ${today.toLocaleDateString()}`);
+        console.log(`📅 Event date: ${eventDateObj.toLocaleDateString()}`);
+        
+        return eventDateObj >= today;
+      } catch (error) {
+        console.log(`⚠️ Could not parse date for event: ${eventDate} - including it`);
+        return true; // Include if we can't parse the date
+      }
     }
-    
-    return isFromTodayOnwards;
   }
   
-  // If we can't parse the date, include it (better to show than hide)
   console.log(`⚠️ Could not parse date for event: ${eventDate} - including it`);
-  return true;
+  return true; // Include if we can't parse the date
 }
 
-// Download the current XML feed from Harvard Gazette
-async function downloadHarvardGazetteXML() {
-  const xmlUrl = 'https://news.harvard.edu/gazette/harvard-events/events-calendar/.xml';
+// Enhanced function to download Harvard Gazette XML from multiple months
+async function downloadHarvardGazetteXMLEnhanced() {
+  const baseUrl = 'https://news.harvard.edu/gazette/harvard-events/events-calendar/.xml';
   
-  console.log('📡 Attempting to download current Harvard Gazette XML feed...');
-  console.log(`🔗 URL: ${xmlUrl}`);
+  console.log('📡 Attempting to download Harvard Gazette XML feeds from multiple months...');
   
-  try {
-    const response = await fetch(xmlUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36'
-      },
-      timeout: 30000
-    });
+  const allXmlData = [];
+  const currentMonth = new Date().getMonth() + 1; // 1-12
+  const currentYear = new Date().getFullYear();
+  
+  // Try to get events from current month and next 3 months
+  const monthsToTry = [];
+  for (let i = 0; i < 4; i++) {
+    const month = (currentMonth + i) % 12 || 12;
+    const year = currentYear + Math.floor((currentMonth + i - 1) / 12);
+    monthsToTry.push({ month, year });
+  }
+  
+  for (const { month, year } of monthsToTry) {
+    const url = `${baseUrl}?month=${month}&year=${year}`;
+    console.log(`🔗 Trying URL: ${url}`);
     
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    let xmlData = await response.text();
-    
-    // Check if we got HTML instead of XML
-    if (xmlData.includes('<!DOCTYPE html>') || xmlData.includes('<html')) {
-      throw new Error('Received HTML instead of XML feed');
-    }
-    
-    console.log(`✅ Downloaded ${xmlData.length} characters of XML data`);
-    
-    // Clean up malformed HTML entities and tags
-    xmlData = cleanXMLData(xmlData);
-    
-    // Save the downloaded XML for backup
-    const backupPath = path.join(__dirname, '../testing/trumba-xml-current');
-    fs.writeFileSync(backupPath, xmlData);
-    console.log(`💾 Saved current XML to: ${backupPath}`);
-    
-    return xmlData;
-    
-  } catch (error) {
-    console.error('❌ Error downloading XML feed:', error.message);
-    console.log('🔄 Falling back to cached XML file...');
-    
-    // Fallback to cached file if download fails
-    const cachedPath = path.join(__dirname, '../testing/trumba-xml');
-    if (fs.existsSync(cachedPath)) {
-      const cachedData = fs.readFileSync(cachedPath, 'utf8');
-      console.log('✅ Using cached XML file');
-      return cleanXMLData(cachedData);
-    } else {
-      throw new Error('No XML data available (download failed and no cache)');
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36'
+        },
+        timeout: 30000
+      });
+      
+      if (!response.ok) {
+        console.log(`❌ HTTP error for month ${month}/${year}: ${response.status}`);
+        continue;
+      }
+      
+      let xmlData = await response.text();
+      
+      // Check if we got HTML instead of XML
+      if (xmlData.includes('<!DOCTYPE html>') || xmlData.includes('<html')) {
+        console.log(`❌ Received HTML instead of XML for month ${month}/${year}`);
+        continue;
+      }
+      
+      // Check if we got any entries
+      const entryCount = (xmlData.match(/<entry>/g) || []).length;
+      if (entryCount > 0) {
+        console.log(`✅ Downloaded ${xmlData.length} characters with ${entryCount} entries for ${month}/${year}`);
+        allXmlData.push(xmlData);
+      } else {
+        console.log(`⚠️ No entries found for month ${month}/${year}`);
+      }
+      
+    } catch (error) {
+      console.error(`❌ Error downloading XML for month ${month}/${year}:`, error.message);
     }
   }
+  
+  if (allXmlData.length === 0) {
+    console.log('🔄 Falling back to original single XML feed...');
+    try {
+      const response = await fetch(baseUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36'
+        },
+        timeout: 30000
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      let xmlData = await response.text();
+      
+      // Check if we got HTML instead of XML
+      if (xmlData.includes('<!DOCTYPE html>') || xmlData.includes('<html')) {
+        throw new Error('Received HTML instead of XML feed');
+      }
+      
+      console.log(`✅ Downloaded ${xmlData.length} characters of XML data from fallback`);
+      allXmlData.push(xmlData);
+      
+    } catch (error) {
+      console.error('❌ Error downloading fallback XML feed:', error.message);
+      throw new Error('No XML data available');
+    }
+  }
+  
+  // Combine all XML data
+  const combinedXml = allXmlData.join('\n');
+  console.log(`📊 Combined ${allXmlData.length} XML feeds into ${combinedXml.length} characters`);
+  
+  // Clean up malformed HTML entities and tags
+  const cleanedXml = cleanXMLData(combinedXml);
+  
+  // Save the downloaded XML for backup
+  const backupPath = path.join(__dirname, '../testing/trumba-xml-enhanced');
+  fs.writeFileSync(backupPath, cleanedXml);
+  console.log(`💾 Saved enhanced XML to: ${backupPath}`);
+  
+  return cleanedXml;
 }
 
 // Clean up malformed XML/HTML data
@@ -135,29 +191,19 @@ function cleanXMLData(xmlData) {
   cleanedData = cleanedData
     .replace(/<img([^>]*?)(?:\/>|>)/g, '<img$1 />') // Fix self-closing img tags
     .replace(/<br([^>]*?)(?:\/>|>)/g, '<br$1 />') // Fix self-closing br tags
-    .replace(/<hr([^>]*?)(?:\/>|>)/g, '<hr$1 />') // Fix self-closing hr tags
-    .replace(/<([^>]*?)>/g, (match, content) => {
-      // Skip if it's already a self-closing tag
-      if (content.endsWith('/')) return match;
-      // Skip if it's a closing tag
-      if (content.startsWith('/')) return match;
-      // Skip if it's a valid opening tag
-      if (!content.includes(' ')) return match;
-      // For tags with attributes, ensure they're properly closed
-      return match;
-    });
+    .replace(/<hr([^>]*?)(?:\/>|>)/g, '<hr$1 />'); // Fix self-closing hr tags
   
   console.log('✅ XML data cleaned');
   return cleanedData;
 }
 
 // Parse the XML file and extract events
-async function parseHarvardEvents() {
+async function parseHarvardEventsEnhanced() {
   try {
-    console.log("=== Parsing Harvard Events Data ===\n");
+    console.log("=== Parsing Harvard Events Data (Enhanced) ===\n");
     
-    // Download the current XML feed
-    const xmlData = await downloadHarvardGazetteXML();
+    // Download the enhanced XML feed
+    const xmlData = await downloadHarvardGazetteXMLEnhanced();
     
     // Parse XML
     const parser = new DOMParser();
@@ -165,7 +211,7 @@ async function parseHarvardEvents() {
     
     // Get all event entries
     const entries = xmlDoc.getElementsByTagName('entry');
-    console.log(`Found ${entries.length} total events in the XML feed\n`);
+    console.log(`Found ${entries.length} total events in the enhanced XML feed\n`);
     
     const events = [];
     const today = getCurrentDateForFiltering();
@@ -194,17 +240,17 @@ async function parseHarvardEvents() {
         // Check if this event is from today onwards
         const eventDate = parsedContent.date || event.title;
         if (isEventFromTodayOnwards(eventDate)) {
-        events.push(event);
-        
-        // Log first few events for preview
+          events.push(event);
+          
+          // Log first few events for preview
           if (events.length <= 5) {
             console.log(`Event ${events.length}:`);
-          console.log(`  Title: ${event.title}`);
-          console.log(`  Date: ${parsedContent.date || 'N/A'}`);
-          console.log(`  Location: ${parsedContent.location || 'N/A'}`);
-          console.log(`  Classification: ${parsedContent.classification || 'N/A'}`);
-          console.log(`  Cost: ${parsedContent.cost || 'N/A'}`);
-          console.log('');
+            console.log(`  Title: ${event.title}`);
+            console.log(`  Date: ${parsedContent.date || 'N/A'}`);
+            console.log(`  Location: ${parsedContent.location || 'N/A'}`);
+            console.log(`  Classification: ${parsedContent.classification || 'N/A'}`);
+            console.log(`  Cost: ${parsedContent.cost || 'N/A'}`);
+            console.log('');
           }
         }
         
@@ -231,7 +277,7 @@ async function parseHarvardEvents() {
       const date = dateMatch ? dateMatch[1] : event.parsed?.date || 'TBD';
       
       return {
-        id: `harvard-gazette-${index}`,
+        id: `harvard-gazette-enhanced-${index}`,
         title: event.title,
         university: "Harvard University",
         location: event.parsed?.location || 'Harvard University',
@@ -247,7 +293,7 @@ async function parseHarvardEvents() {
       };
     });
     
-    const outputPath = path.join(__dirname, 'parsed-harvard-events.json');
+    const outputPath = path.join(__dirname, 'parsed-harvard-events-enhanced.json');
     fs.writeFileSync(outputPath, JSON.stringify(formattedEvents, null, 2));
     console.log(`✓ Saved ${formattedEvents.length} parsed events to ${outputPath}`);
     
@@ -278,42 +324,15 @@ function getAttributeValue(parent, tagName, attributeName) {
 function parseEventContent(content) {
   const parsed = {};
   
-  // First, decode HTML entities
-  content = content
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, ' ');
-  
-  // Extract location (usually first line) - Parse it properly like Engage events
+  // Extract location (usually first line)
   const lines = content.split('<br />');
   if (lines.length > 0) {
-    let locationText = lines[0].trim();
-    
-    // Clean up location text - remove weekdays and common prefixes
-    locationText = locationText.replace(/\b(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b/gi, '').trim();
-    
-    // For Harvard Gazette events, the location is usually just the venue name
-    // The address is often on the second line
-    parsed.location = locationText;
-    
-    // If there's a second line with address, combine them
-    if (lines.length > 1 && lines[1].trim()) {
-      const addressText = lines[1].trim();
-      if (addressText.includes('St.') || addressText.includes('Ave.') || addressText.includes('Cambridge')) {
-        parsed.location = `${locationText}, ${addressText}`;
-      }
-    }
-    
-    // Remove common Harvard prefixes
-    parsed.location = parsed.location.replace(/Harvard University|Harvard Yard/gi, '').trim();
+    parsed.location = lines[0].trim();
   }
   
-  // Extract date (usually third line or later)
-  if (lines.length > 2) {
-    parsed.date = lines[2].trim();
+  // Extract date (usually second line)
+  if (lines.length > 1) {
+    parsed.date = lines[1].trim();
   }
   
   // Extract classification
@@ -352,7 +371,7 @@ function parseEventContent(content) {
     parsed.speakers = speakerMatch[1].trim();
   }
   
-  // Clean up HTML tags from text for description
+  // Clean up HTML tags from text
   parsed.description = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   
   return parsed;
@@ -410,8 +429,8 @@ function generateEventStats(events) {
   console.log(`\nTotal Events: ${events.length}`);
 }
 
-// Run the parser
-parseHarvardEvents().catch(error => {
+// Run the enhanced parser
+parseHarvardEventsEnhanced().catch(error => {
   console.error("Failed to parse Harvard events:", error);
   process.exit(1);
 }); 

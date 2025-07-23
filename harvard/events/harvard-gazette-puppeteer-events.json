@@ -1,0 +1,30 @@
+[
+  {
+    "id": "gazette-1752943733817-0",
+    "title": "Sections",
+    "dateTime": "Jump to a Day\n\n\t\t\t\t\n\t\t\t\t\t$Trumba.addSpud({\n\t\t\t\t\t\twebName: \"gazette\",\n\t\t\t\t\t\tspudType: \"datefinder\",\n\t\t\t\t\t\turl: { filterview: \"Gazette Classification\" }\n\t\t\t\t\t});\n\t\t\t\tPlease update your browser to view the iframe content.",
+    "location": "",
+    "description": "",
+    "eventLink": "https://news.harvard.edu/gazette/harvard-events/events-calendar/#wp--skip-link--target",
+    "source": "Harvard Gazette",
+    "categories": [],
+    "host": "",
+    "image": "",
+    "created_at": "2025-07-19T16:48:53.817Z",
+    "updated_at": "2025-07-19T16:48:53.817Z"
+  },
+  {
+    "id": "gazette-1752943733817-1",
+    "title": "Calendar View",
+    "dateTime": "Jump to a Day\n\n\t\t\t\t\n\t\t\t\t\t$Trumba.addSpud({\n\t\t\t\t\t\twebName: \"gazette\",\n\t\t\t\t\t\tspudType: \"datefinder\",\n\t\t\t\t\t\turl: { filterview: \"Gazette Classification\" }\n\t\t\t\t\t});\n\t\t\t\tPlease update your browser to view the iframe content.",
+    "location": "",
+    "description": "",
+    "eventLink": "",
+    "source": "Harvard Gazette",
+    "categories": [],
+    "host": "",
+    "image": "",
+    "created_at": "2025-07-19T16:48:53.817Z",
+    "updated_at": "2025-07-19T16:48:53.817Z"
+  }
+]

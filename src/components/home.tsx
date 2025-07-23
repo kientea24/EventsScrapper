@@ -30,7 +30,7 @@ import UniversityPortal from "./UniversityPortal";
 import PersonalDashboard from "./PersonalDashboard";
 
 // Import the parsed Harvard events
-import harvardEventsData from "../../harvard/events/all-harvard-events.json";
+import { searchEvents } from "@/utils/supabase-helpers";
 
 const Home = ({ initialSignedInState = false }) => {
   const navigate = useNavigate();
@@ -195,16 +195,36 @@ const Home = ({ initialSignedInState = false }) => {
     });
   };
 
-  // Load Harvard events as external events
+  // Load events from Supabase as external events
   useEffect(() => {
+    (async () => {
     try {
-      const harvardEvents = transformHarvardEvents();
-      console.log(`Loaded ${harvardEvents.length} Harvard events`);
-      setCreatedEvents(harvardEvents);
+        const events = await searchEvents();
+        // Transform Supabase events to match frontend format
+        const transformedEvents = events.map(event => ({
+          id: event.id,
+          title: event.title,
+          university: 'Harvard University',
+          location: event.location || event.full_location || '',
+          dates: event.date_time || '',
+          description: event.description || event.title,
+          image: event.image || 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=600&q=80',
+          type: 'event',
+          tags: event.categories || ['Event'],
+          link: event.link || '#',
+          weblink: event.event_link || event.link || '#',
+          cost: '',
+          organization: event.host || '',
+          source: event.source || 'Harvard Event',
+          eventLink: event.event_link || '',
+        }));
+        setCreatedEvents(transformedEvents || []);
+        console.log(`Loaded ${transformedEvents.length} events from Supabase`);
     } catch (error) {
-      console.error('Error loading Harvard events:', error);
+        console.error('Error loading events from Supabase:', error);
       setCreatedEvents([]);
     }
+    })();
   }, []);
 
   const handleCreateEvent = () => {

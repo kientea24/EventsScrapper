@@ -91,7 +91,7 @@ function extractTimeFromEngageDates(dates) {
       timeString: match[1].trim()
     };
   }
-  
+
   return null;
 }
 
@@ -130,7 +130,7 @@ function timeToMinutes(timeStr) {
   } else if (period === 'am' && hours === 12) {
     hour24 = 0;
   }
-  
+
   return hour24 * 60 + (minutes || 0);
 }
 
@@ -163,8 +163,8 @@ function processEventsByTime() {
       if (!event.dates || event.dates === 'TBD') {
         console.log(`✅ Keeping event with TBD date: ${event.title}`);
         return true;
-      }
-      
+  }
+
       return isEventFromTodayOnwards(event.dates);
     });
     
@@ -184,9 +184,9 @@ function processEventsByTime() {
     const processedEvents = currentEvents.map(event => {
       const timeInfo = extractTimeFromEvent(event);
       const dateInfo = parseDate(event.dates);
-      
-      return {
-        ...event,
+    
+    return {
+      ...event,
         timeInfo,
         dateInfo,
         hasTime: !!timeInfo,
@@ -204,7 +204,7 @@ function processEventsByTime() {
         eventsByDate[dateKey] = {
           dateInfo: event.dateInfo,
           events: []
-        };
+    };
       }
       
       eventsByDate[dateKey].events.push(event);
@@ -222,12 +222,12 @@ function processEventsByTime() {
         } else {
           return 0; // Both have no time, maintain original order
         }
-      });
+  });
     });
-    
+
     // Group events by time within each date
     const eventsByTimeAndDate = {};
-    
+  
     Object.keys(eventsByDate).forEach(dateKey => {
       const dateData = eventsByDate[dateKey];
       eventsByTimeAndDate[dateKey] = {
@@ -261,7 +261,7 @@ function processEventsByTime() {
       const timeKeys = Object.keys(timeGroups).sort((a, b) => {
         if (a === 'No specific time') return 1;
         if (b === 'No specific time') return -1;
-        
+
         // Convert times to minutes for sorting
         const timeA = timeToMinutes(a);
         const timeB = timeToMinutes(b);
@@ -275,11 +275,11 @@ function processEventsByTime() {
       
       eventsByTimeAndDate[dateKey].timeGroups = sortedTimeGroups;
     });
-    
+
     // Save the processed data
     const groupedOutputPath = path.join(__dirname, 'harvard-events-grouped-by-date.json');
     fs.writeFileSync(groupedOutputPath, JSON.stringify(eventsByTimeAndDate, null, 2));
-    
+
     // Create a summary
     const summary = {
       totalEvents: events.length,
@@ -295,7 +295,7 @@ function processEventsByTime() {
     console.log('Processing complete!');
     console.log('Summary:', summary);
     console.log(`Output saved to: ${groupedOutputPath}`);
-    
+
     // Also create a sorted timeline version
     const timelineEvents = processedEvents
       .filter(e => e.hasTime)
@@ -313,7 +313,7 @@ function processEventsByTime() {
     console.log(`Timeline saved to: ${sortedOutputPath}`);
     
     return { eventsByTimeAndDate, timelineEvents, summary };
-    
+
   } catch (error) {
     console.error('Error processing events:', error);
     throw error;

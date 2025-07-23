@@ -1,13 +1,13 @@
 {
-  "timestamp": "2025-07-18T05:41:24.419Z",
-  "humanReadable": "Friday, July 18, 2025 at 01:41 PM GMT+8",
-  "totalEvents": 9,
+  "timestamp": "2025-07-19T16:59:20.436Z",
+  "humanReadable": "Sunday, July 20, 2025 at 12:59 AM GMT+8",
+  "totalEvents": 264,
   "sources": {
-    "gazette": 5,
-    "engage": 5
+    "gazette": 411,
+    "engage": 16
   },
   "dateRange": {
-    "from": "Friday, July 18, 2025",
+    "from": "Sunday, July 20, 2025",
     "to": "Ongoing"
   }
 }

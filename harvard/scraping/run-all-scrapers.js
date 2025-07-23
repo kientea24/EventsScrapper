@@ -51,13 +51,13 @@ async function runAllScrapers() {
   console.log('✅ Cleanup completed\n');
   
   try {
-    // 1. Run Harvard Gazette scraper
-    console.log('📰 Running Harvard Gazette scraper...');
-    execSync('node ../events/parse-harvard-events.js', { 
+    // 1. Run Harvard Gazette scraper (Puppeteer)
+    console.log('📰 Running Harvard Gazette scraper (Puppeteer)...');
+    execSync('node scrape-harvard-gazette-puppeteer.cjs', { 
       cwd: __dirname, 
       stdio: 'inherit' 
     });
-    console.log('✅ Harvard Gazette scraper completed\n');
+    console.log('✅ Harvard Gazette scraper (Puppeteer) completed\n');
     
     // 2. Run Harvard Engage scraper
     console.log('🎓 Running Harvard Engage scraper...');

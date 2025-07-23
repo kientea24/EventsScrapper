@@ -18,7 +18,8 @@
     "process:times": "node harvard/events/extract-and-order-events-by-time.cjs",
     "dev:fresh": "npm run scrape && npm run dev",
     "refresh": "npm run scrape:all && npm run combine && npm run process:times",
-    "refresh:full": "npm run scrape:all && npm run combine && npm run process:times && npm run dev"
+    "refresh:full": "npm run scrape:all && npm run combine && npm run process:times && npm run dev",
+    "predev": "node harvard/events/combine-all-events.js && node scripts/refresh-events.cjs --no-scrape"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.6.0",

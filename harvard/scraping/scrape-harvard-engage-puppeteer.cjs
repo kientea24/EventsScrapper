@@ -7,8 +7,8 @@ async function scrapeHarvardEngage() {
   
   let browser;
   try {
-    browser = await puppeteer.launch({ 
-      headless: true, 
+    browser = await puppeteer.launch({
+      headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--no-first-run', '--no-zygote', '--disable-gpu'],
       timeout: 120000 // 2 minutes timeout
     });
@@ -28,10 +28,10 @@ async function scrapeHarvardEngage() {
     let retries = 3;
     while (retries > 0) {
       try {
-        await page.goto('https://engage.gsas.harvard.edu/events', { 
-          waitUntil: 'networkidle2',
+    await page.goto('https://engage.gsas.harvard.edu/events', {
+      waitUntil: 'networkidle2',
           timeout: 120000 
-        });
+    });
         break;
       } catch (error) {
         retries--;
@@ -130,9 +130,9 @@ async function scrapeHarvardEngage() {
     });
     console.log(`🔗 Found ${eventLinks.length} event links.`);
 
-    // Limit to 5 events for testing
-    const limitedEventLinks = eventLinks.slice(0, 5);
-    console.log(`🔢 Limiting to ${limitedEventLinks.length} events for testing`);
+    // Use all eventLinks
+    const limitedEventLinks = eventLinks;
+    console.log(`🔢 Using all ${limitedEventLinks.length} event links`);
 
     // Visit each event detail page and extract required fields
     const events = [];
@@ -284,7 +284,7 @@ async function scrapeHarvardEngage() {
         console.error('❌ Error scraping event detail:', link, err.message);
       }
     }
-
+    
     // Save parsed events
     const outputPath = path.join(__dirname, '../events/parsed-harvard-engage.json');
     fs.writeFileSync(outputPath, JSON.stringify(events, null, 2));
@@ -322,7 +322,7 @@ function parseEventsFromHTML(html) {
         const key = `${event.title}|${event.date}|${event.location}`.toLowerCase().replace(/\s+/g, ' ').trim();
         if (!seenEvents.has(key)) {
           seenEvents.add(key);
-          events.push(event);
+        events.push(event);
         }
       }
     }
@@ -369,7 +369,7 @@ function extractEventDetails(cardContent, eventId) {
   
   for (const pattern of datePatterns) {
     const dateMatch = cardContent.match(pattern);
-    if (dateMatch) {
+  if (dateMatch) {
       const dateText = dateMatch[1].trim();
       // Only use if it looks like a date/time
       if (dateText && (dateText.includes('AM') || dateText.includes('PM') || 

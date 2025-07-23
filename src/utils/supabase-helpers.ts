@@ -81,101 +81,99 @@ export interface EventData {
   updated_at?: string;
 }
 
-// Batch insert events with conflict resolution (commented out until events table is created)
-// export const batchInsertEvents = async (events: EventData[]) => {
-//   try {
-//     const { data, error } = await supabase
-//       .from("events")
-//       .upsert(events, {
-//         onConflict: "external_id,source",
-//         ignoreDuplicates: false,
-//       })
-//       .select();
-//
-//     if (error) throw error;
-//     return data;
-//   } catch (error) {
-//     console.error("Error batch inserting events:", error);
-//     throw error;
-//   }
-// };
-//
-// // Search events with filters
-// export const searchEvents = async (filters: {
-//   query?: string;
-//   startDate?: string;
-//   endDate?: string;
-//   location?: string;
-//   source?: string;
-//   limit?: number;
-//   offset?: number;
-// }) => {
-//   try {
-//     let query = supabase.from("events").select("*");
-//
-//     // Apply filters
-//     if (filters.query) {
-//       query = query.or(
-//         `title.ilike.%${filters.query}%,description.ilike.%${filters.query}%`,
-//       );
-//     }
-//
-//     if (filters.startDate) {
-//       query = query.gte("start_date", filters.startDate);
-//     }
-//
-//     if (filters.endDate) {
-//       query = query.lte("start_date", filters.endDate);
-//     }
-//
-//     if (filters.location) {
-//       query = query.ilike("location", `%${filters.location}%`);
-//     }
-//
-//     if (filters.source) {
-//       query = query.eq("source", filters.source);
-//     }
-//
-//     // Apply pagination
-//     if (filters.limit) {
-//       query = query.limit(filters.limit);
-//     }
-//
-//     if (filters.offset) {
-//       query = query.range(
-//         filters.offset,
-//         filters.offset + (filters.limit || 10) - 1,
-//       );
-//     }
-//
-//     // Order by start date
-//     query = query.order("start_date", { ascending: true });
-//
-//     const { data, error } = await query;
-//
-//     if (error) throw error;
-//     return data;
-//   } catch (error) {
-//     console.error("Error searching events:", error);
-//     throw error;
-//   }
-// };
-//
-// // Real-time event subscription
-// export const subscribeToEvents = (callback: (payload: any) => void) => {
-//   return supabase
-//     .channel("events-changes")
-//     .on(
-//       "postgres_changes",
-//       {
-//         event: "*",
-//         schema: "public",
-//         table: "events",
-//       },
-//       callback,
-//     )
-//     .subscribe();
-// };
+// Batch insert events with conflict resolution
+export const batchInsertEvents = async (events) => {
+  try {
+    // Map events to match Supabase schema
+    const mappedEvents = events.map(ev => ({
+      id: ev.id,
+      title: ev.title,
+      date_time: ev.dateTime || ev.dates || '',
+      location: ev.location || '',
+      location_venue: ev.locationVenue || '',
+      location_address: ev.locationAddress || '',
+      location_city: ev.locationCity || '',
+      full_location: ev.fullLocation || '',
+      description: ev.description || '',
+      categories: ev.categories || [],
+      host: ev.host || '',
+      image: ev.image || '',
+      event_link: ev.eventLink || '',
+      link: ev.link || '',
+      source: ev.source || '',
+      created_at: ev.created_at,
+      updated_at: ev.updated_at
+    }));
+    const { data, error } = await supabase
+      .from("events")
+      .upsert(mappedEvents, {
+        onConflict: "id",
+        ignoreDuplicates: false,
+      })
+      .select();
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error("Error batch inserting events:", error);
+    throw error;
+  }
+};
+
+// Search events with filters
+export const searchEvents = async (filters = {}) => {
+  try {
+    let query = supabase.from("events").select("*");
+    if (filters.query) {
+      query = query.or(
+        `title.ilike.%${filters.query}%,description.ilike.%${filters.query}%`
+      );
+    }
+    if (filters.startDate) {
+      query = query.gte("date_time", filters.startDate);
+    }
+    if (filters.endDate) {
+      query = query.lte("date_time", filters.endDate);
+    }
+    if (filters.location) {
+      query = query.ilike("location", `%${filters.location}%`);
+    }
+    if (filters.source) {
+      query = query.eq("source", filters.source);
+    }
+    if (filters.limit) {
+      query = query.limit(filters.limit);
+    }
+    if (filters.offset) {
+      query = query.range(
+        filters.offset,
+        filters.offset + (filters.limit || 10) - 1
+      );
+    }
+    query = query.order("date_time", { ascending: true });
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error("Error searching events:", error);
+    throw error;
+  }
+};
+
+// Real-time event subscription
+export const subscribeToEvents = (callback: (payload: any) => void) => {
+  return supabase
+    .channel("events-changes")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "events",
+      },
+      callback,
+    )
+    .subscribe();
+};
 
 // Utility to check if storage bucket exists and create if needed
 export const ensureStorageBucket = async (

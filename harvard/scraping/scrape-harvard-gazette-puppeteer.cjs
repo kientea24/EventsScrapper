@@ -3,573 +3,329 @@ const fs = require('fs');
 const path = require('path');
 
 async function scrapeHarvardGazette() {
-  console.log('🔄 Starting Harvard Gazette scraper (Puppeteer)...');
-  let browser;
+  console.log('📰 Starting Harvard Gazette scraper with Puppeteer (Pagination Only)...');
+  
+  const browser = await puppeteer.launch({
+    headless: false, // Set to true for production
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
+  
   try {
-    browser = await puppeteer.launch({ 
-      headless: true, 
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--no-first-run', '--no-zygote', '--disable-gpu'],
-      timeout: 120000 // 2 minutes timeout
-    });
-    
     const page = await browser.newPage();
-    
-    // Set longer timeouts
-    await page.setDefaultNavigationTimeout(120000); // 2 minutes
-    await page.setDefaultTimeout(120000); // 2 minutes
     
     // Set user agent to avoid detection
     await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36');
     
-    // Navigate to Harvard Gazette events page
-    console.log('🌐 Navigating to Harvard Gazette events page...');
+    // Navigate to the Harvard Gazette events page
+    console.log('🔗 Navigating to Harvard Gazette events page...');
     await page.goto('https://news.harvard.edu/gazette/harvard-events/events-calendar/', {
-      waitUntil: 'networkidle2',
-      timeout: 120000
+      waitUntil: 'domcontentloaded',
+      timeout: 60000
     });
     
-    console.log('✅ Loaded Harvard Gazette events page');
-    
-    // Wait for the page to fully load
+    // Wait for the page to load completely
     await new Promise(resolve => setTimeout(resolve, 5000));
     
-    // Scroll to load all events
-    console.log('📜 Scrolling to load all events...');
-    await page.evaluate(() => {
-      window.scrollTo(0, document.body.scrollHeight);
-    });
+    console.log('📄 Page loaded, starting pagination...');
+    
+    // Wait for any dynamic content to load
     await new Promise(resolve => setTimeout(resolve, 3000));
     
-    // Check for iframes (Trumba calendar is likely embedded)
-    console.log('🔍 Looking for embedded calendar iframe...');
+    // Check if there are any iframes on the page
     const iframes = await page.$$('iframe');
-    console.log(`Found ${iframes.length} iframes`);
+    console.log(`🔍 Found ${iframes.length} iframes on the page`);
     
-    let eventLinks = [];
-    
-    // Try to extract links from iframes first
-    for (let i = 0; i < iframes.length; i++) {
-      try {
-        console.log(`Checking iframe ${i + 1}/${iframes.length}`);
-        const frame = iframes[i];
-        const frameContent = await frame.contentFrame();
-        
-        if (frameContent) {
-          // Wait for iframe to load
-          await new Promise(resolve => setTimeout(resolve, 3000));
-          
-          // Try to find event links in the iframe
-          const frameLinks = await frameContent.evaluate(() => {
-            const selectors = [
-              'a[href*="trumbaEmbed=view%3devent"]',
-              'a[href*="eventid"]',
-              'a[href*="view%3devent"]',
-              '.event a',
-              '.event-card a',
-              'a[href*="event"]'
-            ];
-            
-            let anchors = [];
-            for (const selector of selectors) {
-              const found = Array.from(document.querySelectorAll(selector));
-              if (found.length > 0) {
-                console.log(`Found ${found.length} links with selector: ${selector}`);
-                anchors = found;
-                break;
-              }
-            }
-            
-            return anchors.map(a => a.href).filter(href => href && href.includes('event'));
-          });
-          
-          if (frameLinks.length > 0) {
-            console.log(`Found ${frameLinks.length} event links in iframe ${i + 1}`);
-            eventLinks = frameLinks;
-            break;
-          }
-        }
-      } catch (err) {
-        console.log(`Error checking iframe ${i + 1}: ${err.message}`);
-      }
+    // First, call the XML scraper to get initial events from page 1
+    console.log('📡 Calling XML scraper for initial events (page 1)...');
+    try {
+      const { execSync } = require('child_process');
+      execSync('node ../events/parse-harvard-events.js', { 
+        cwd: path.join(__dirname, '../scraping'),
+        stdio: 'pipe'
+      });
+      console.log('✅ XML scraper completed for initial events');
+    } catch (error) {
+      console.log('⚠️ XML scraper failed for initial events:', error.message);
     }
     
-    // If no links found in iframes, try the main page
-    if (eventLinks.length === 0) {
-      console.log('No event links found in iframes, trying main page...');
-      eventLinks = await page.evaluate(() => {
-        // Try multiple selectors to find event links
-        const selectors = [
-          'a[href*="trumbaEmbed=view%3devent"]',
-          'a[href*="event"]',
-          'a[href*="gazette"]',
-          'a[href*="trumba"]',
-          '.event a',
-          '.event-card a',
-          'a[href*="view%3devent"]'
+    // Load the initial events to see the count
+    try {
+      const initialEvents = JSON.parse(fs.readFileSync(path.join(__dirname, '../events/parsed-harvard-events.json'), 'utf8'));
+      console.log(`📊 Loaded ${initialEvents.length} events from XML scraper (page 1)`);
+    } catch (error) {
+      console.log('⚠️ Could not read initial events file:', error.message);
+    }
+    
+    // Now navigate through pages and call XML scraper for each page
+    console.log('🔄 Starting pagination to get events from multiple pages...');
+    
+    const maxPages = 5; // Limit to 5 pages for testing
+    let pageNumber = 1;
+    
+    while (pageNumber <= maxPages) {
+      console.log(`📄 Processing page ${pageNumber}...`);
+      
+      // Wait for any new XHR responses
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // Try to click next page button (not next month)
+      try {
+        const nextPageSelectors = [
+          'a[id="ctl04_ctl07_ctl00_lnk2NextPg"]', // Exact ID from the element you provided
+          'a[title="Next Page"]',
+          'a[aria-label="Next Page"]',
+          'a.right[role="button"]',
+          'a[href*="javascript:Nav"]',
+          'a[class*="right"]',
+          'a[class*="next"]',
+          '.twPagerBtn.right',
+          'a[onclick*="scrollIntoView"]',
+          'a[onclick*="mySpud.container.scrollIntoView"]',
+          'a[onclick*="Nav("]',
+          'a[href*="date="]',
+          // More specific selectors for "Next Page" (not "Next Month")
+          'a[title="Next Page"][aria-label="Next Page"]',
+          'a[aria-label="Next Page"][class*="right"]',
+          'a[class="twPagerBtn right"]',
+          'a[id*="lnk2NextPg"][class*="right"]',
+          'a[onclick*="Nav"][title="Next Page"]',
+          'a[href*="javascript:Nav"][title="Next Page"]'
         ];
         
-        let anchors = [];
-        for (const selector of selectors) {
-          const found = Array.from(document.querySelectorAll(selector));
-          if (found.length > 0) {
-            console.log(`Found ${found.length} links with selector: ${selector}`);
-            anchors = found;
+        let nextButton = null;
+        let targetFrame = null;
+        
+        // First try to find the button in the main page
+        for (const selector of nextPageSelectors) {
+          nextButton = await page.$(selector);
+          if (nextButton) {
+            console.log(`➡️ Found next page button with selector: ${selector}`);
             break;
           }
         }
         
-        // If no links found with specific selectors, try to get all links and filter
-        if (anchors.length === 0) {
-          anchors = Array.from(document.querySelectorAll('a[href]'));
-          console.log(`Total links found: ${anchors.length}`);
-          // Log first few links for debugging
-          anchors.slice(0, 5).forEach((a, i) => {
-            console.log(`Link ${i}: ${a.href} - ${a.textContent?.trim()}`);
-          });
-        }
-        
-        // Only unique event links
-        const seen = new Set();
-        return anchors
-          .map(a => a.getAttribute('href'))
-          .filter(href => {
-            if (!href) return false;
-            if (seen.has(href)) return false;
-            seen.add(href);
-            return true;
-          });
-      });
-    }
-    
-    console.log(`🔗 Found ${eventLinks.length} event links.`);
-    
-    // Debug: log the first few links
-    if (eventLinks.length > 0) {
-      console.log('First few links found:');
-      eventLinks.slice(0, 3).forEach((link, i) => {
-        console.log(`  ${i + 1}: ${link}`);
-      });
-    }
-    
-    // Get more events to ensure we have current ones
-    // Remove or comment out any .slice(0, 10), .slice(0, 30), or similar event limiting on eventLinks or limitedEventLinks
-    const limitedEventLinks = eventLinks.slice(0, 5);
-    console.log(`🔢 Limiting to ${limitedEventLinks.length} events for testing`);
-
-    // Visit each event detail page and extract required fields
-    const events = [];
-    // Scrape each event detail page
-    console.log(`�� Scraping ${limitedEventLinks.length} event detail pages...`);
-    
-    for (let i = 0; i < limitedEventLinks.length; i++) {
-      const link = limitedEventLinks[i];
-      console.log(`📄 Scraping event ${i + 1}/${limitedEventLinks.length}: ${link}`);
-      
-      try {
-        // Add delay between requests to avoid rate limiting
-        if (i > 0) {
-          await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
-        }
-        
-        // Convert relative URLs to absolute URLs
-        let fullUrl = link;
-        if (link.startsWith('/')) {
-          fullUrl = `https://news.harvard.edu${link}`;
-        } else if (!link.startsWith('http')) {
-          fullUrl = `https://news.harvard.edu/${link}`;
-        }
-        
-        // Navigate to event detail page with retry
-        let detailPage;
-        let retries = 2;
-        while (retries > 0) {
-          try {
-            detailPage = await browser.newPage();
-            await detailPage.setDefaultNavigationTimeout(120000);
-            await detailPage.setDefaultTimeout(120000);
-            await detailPage.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36');
-            
-            await detailPage.goto(fullUrl, {
-              waitUntil: 'networkidle2',
-              timeout: 120000
-            });
-            
-            // Wait for content to load
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            break;
-          } catch (err) {
-            console.error(`❌ Error navigating to event ${i + 1} (attempt ${3 - retries}/3):`, err.message);
-            retries--;
-            if (detailPage) await detailPage.close();
-            if (retries === 0) throw err;
-            await new Promise(resolve => setTimeout(resolve, 5000));
-          }
-        }
-
-        // Extract details from the event detail page
-        let event = await detailPage.evaluate(async (isFirst) => {
-          // Debug: log the page content structure
-          console.log('Page title:', document.title);
-          console.log('Page URL:', window.location.href);
+        // If not found in main page, check inside iframes
+        if (!nextButton) {
+          console.log('🔍 Checking iframes for navigation elements...');
+          const iframes = await page.$$('iframe');
           
-          // Check if we're in an iframe
-          const iframes = document.querySelectorAll('iframe');
-          console.log(`Found ${iframes.length} iframes on event detail page`);
-          
-          // If there are iframes, try to get content from the first iframe
-          if (iframes.length > 0) {
-            console.log('Event detail page has iframes, content likely embedded');
-            // Return a flag to indicate we need to handle iframe content
-            return { hasIframes: true, iframeCount: iframes.length };
-          }
-          
-          // Title - try multiple selectors
-          const titleSelectors = [
-            'h1', 'h2', '.event-title', '.MuiTypography-h3', '.trumba-event-title',
-            '.event-detail-title', '.title', '[data-testid="event-title"]',
-            '.event-name', '.event-header h1', '.event-header h2', '.event-header .title',
-            '.trumba-event-name', '.event-detail h1', '.event-detail h2',
-            '.event-info h1', '.event-info h2', '.event-info .title'
-          ];
-          let title = '';
-          for (const selector of titleSelectors) {
-            const el = document.querySelector(selector);
-            if (el && el.innerText.trim()) {
-              title = el.innerText.trim();
-              console.log('Found title with selector:', selector, 'Value:', title);
-              break;
-            }
-          }
-          
-          // If no title found with selectors, try to find any text that looks like an event title
-          if (!title || title.toLowerCase() === 'harvard events' || title.toLowerCase() === 'sections') {
-            console.log('No valid title found with selectors, trying alternative methods...');
-            
-            // Look for any text that might be an event title
-            const allText = document.body.innerText;
-            const lines = allText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-            
-            console.log('First 10 lines of page text:', lines.slice(0, 10));
-            
-            // Look for lines that might be event titles (not too long, not generic)
-            for (const line of lines) {
-              if (line.length > 5 && line.length < 100 && 
-                  !line.toLowerCase().includes('harvard events') &&
-                  !line.toLowerCase().includes('sections') &&
-                  !line.toLowerCase().includes('where') &&
-                  !line.toLowerCase().includes('when') &&
-                  !line.toLowerCase().includes('details') &&
-                  !line.toLowerCase().includes('organization') &&
-                  !line.toLowerCase().includes('classification') &&
-                  !line.toLowerCase().includes('cost') &&
-                  !line.toLowerCase().includes('contact') &&
-                  !line.toLowerCase().includes('more info')) {
-                title = line;
-                console.log('Found potential title from text analysis:', title);
-                break;
-              }
-            }
-          }
-          
-          if (title.toLowerCase() === 'sections') return null; // Skip non-events
-          
-          // Helper function to extract section content
-          function extractSection(sectionName) {
-            // Look for the section by various patterns
-            const patterns = [
-              new RegExp(`${sectionName}\\s*([\\s\\S]*?)(?=\\n\\s*(?:Where|When|Details|Organization|Cost|More info|Contact|$))`, 'i'),
-              new RegExp(`${sectionName}:\\s*([\\s\\S]*?)(?=\\n\\s*(?:Where|When|Details|Organization|Cost|More info|Contact|$))`, 'i'),
-              new RegExp(`${sectionName}\\s*([\\s\\S]*?)(?=\\n\\s*[A-Z][a-z]+:)`, 'i')
-            ];
-            
-            // Get all text content
-            const allText = document.body.innerText;
-            console.log('Page text content (first 500 chars):', allText.substring(0, 500));
-            
-            for (const pattern of patterns) {
-              const match = allText.match(pattern);
-              if (match && match[1]) {
-                console.log(`Found ${sectionName} section:`, match[1].substring(0, 100));
-                return match[1].trim();
-              }
-            }
-            return '';
-          }
-
-          // Extract location from 'Where' section
-          let locationVenue = '';
-          let locationAddress = '';
-          let locationCity = '';
-          let fullLocation = '';
-          let location = '';
-          
-          const whereSection = extractSection('Where');
-          if (whereSection) {
-            fullLocation = whereSection;
-            // Split by line breaks or common separators
-            const lines = whereSection.split(/\n|\r|,?\s*Cambridge/i).filter(line => line.trim());
-            if (lines.length >= 2) {
-              locationVenue = lines[0].trim();
-              locationAddress = lines[1].trim();
-              locationCity = 'Cambridge';
-            } else if (whereSection.includes(',')) {
-              const parts = whereSection.split(',');
-              locationVenue = parts[0].trim();
-              locationAddress = parts[1]?.trim() || '';
-              locationCity = parts[2]?.trim() || 'Cambridge';
-            } else {
-              locationVenue = whereSection;
-            }
-            location = [locationVenue, locationAddress, locationCity].filter(Boolean).join('\n');
-          }
-
-          // Extract date/time from 'When' section
-          let dateTime = '';
-          const whenSection = extractSection('When');
-          if (whenSection) {
-            dateTime = whenSection.replace(/\n+/g, ' ').trim();
-          }
-
-          // Extract description from 'Details' section and cut off at LINK
-          let description = '';
-          let eventLink = '';
-          const detailsSection = extractSection('Details');
-          if (detailsSection) {
-            // Split at "LINK" to separate description from link
-            const linkIndex = detailsSection.indexOf('LINK');
-            if (linkIndex !== -1) {
-              description = detailsSection.substring(0, linkIndex).replace(/\n+/g, '\n').trim();
-              // Extract the link after "LINK"
-              const afterLink = detailsSection.substring(linkIndex + 4).trim();
-              // Find the actual URL (look for http or www)
-              const urlMatch = afterLink.match(/(https?:\/\/[^\s]+|www\.[^\s]+)/);
-              if (urlMatch) {
-                eventLink = urlMatch[1];
-                // If it starts with www, add https://
-                if (eventLink.startsWith('www.')) {
-                  eventLink = 'https://' + eventLink;
-                }
-              }
-            } else {
-              description = detailsSection.replace(/\n+/g, '\n').trim();
-            }
-          }
-          
-          // Also try to extract link from "More info" section
-          if (!eventLink) {
-            const moreInfoSection = extractSection('More info');
-            if (moreInfoSection) {
-              const urlMatch = moreInfoSection.match(/(https?:\/\/[^\s]+|www\.[^\s]+)/);
-              if (urlMatch) {
-                eventLink = urlMatch[1];
-                if (eventLink.startsWith('www.')) {
-                  eventLink = 'https://' + eventLink;
-                }
-              }
-            }
-          }
-          
-          // Try to extract link from the entire iframe text if still not found
-          if (!eventLink) {
-            const urlMatch = iframeText.match(/(https?:\/\/[^\s]+|www\.[^\s]+)/);
-            if (urlMatch) {
-              eventLink = urlMatch[1];
-              if (eventLink.startsWith('www.')) {
-                eventLink = 'https://' + eventLink;
-              }
-            }
-          }
-          
-          // Debug: Log if we found an event link
-          if (eventLink) {
-            console.log(`🔗 Found event link for "${title}": ${eventLink}`);
-          }
-
-          // Extract organization from 'Organization' section
-          let host = '';
-          const orgSection = extractSection('Organization');
-          if (orgSection) {
-            host = orgSection.replace(/\n+/g, ' ').trim();
-          }
-
-          // Extract categories from 'Classification' section
-          let categories = [];
-          const classificationSection = extractSection('Classification');
-          if (classificationSection) {
-            categories = classificationSection.split(/\n|,/).map(s => s.trim()).filter(Boolean);
-          }
-
-          // Image (try to get the main event image)
-          let image = '';
-          const imgEl = document.querySelector('img');
-          if (imgEl && imgEl.src) image = imgEl.src;
-
-          console.log('Extracted event data:', {
-            title: title.substring(0, 50),
-            locationVenue: locationVenue.substring(0, 30),
-            dateTime: dateTime.substring(0, 30),
-            hasDescription: !!description,
-            hasHost: !!host
-          });
-
-          return { title, dateTime, location, locationVenue, locationAddress, locationCity, fullLocation, description, categories, host, image, eventLink };
-        }, i === 0);
-        
-        // If the page has iframes, try to extract content from the iframe
-        if (event && event.hasIframes) {
-          console.log(`Event detail page has ${event.iframeCount} iframes, extracting from iframe #1...`);
-          
-          const iframes = await detailPage.$$('iframe');
-          if (iframes.length > 1) {
-            const frame = iframes[1]; // Use iframe #1 (second iframe)
-            const frameContent = await frame.contentFrame();
-            if (frameContent) {
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              const allText = await frameContent.evaluate(() => document.body.innerText);
-              const lines = allText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-              // Parse fields from lines
-              let title = '';
-              let dateTime = '';
-              let location = '';
-              let locationVenue = '';
-              let locationAddress = '';
-              let locationCity = '';
-              let fullLocation = '';
-              let description = '';
-              let eventLink = '';
-              let categories = [];
-              let host = '';
-              let image = '';
-              // Find title (first non-empty, non-generic line after 'opens in new window')
-              for (let j = 1; j < lines.length; j++) {
-                if (lines[j] && !lines[j].toLowerCase().includes('opens in new window')) {
-                  title = lines[j];
-                  break;
-                }
-              }
-              // Find date/time, location, and other fields
-              for (let j = 2; j < lines.length; j++) {
-                if (lines[j].startsWith('WHEN')) {
-                  dateTime = lines[j].replace('WHEN', '').replace(/\t+/g, ' ').trim();
-                }
-                if (lines[j].startsWith('WHERE')) {
-                  locationVenue = lines[j].replace('WHERE', '').replace(/\t+/g, ' ').trim();
-                  // Next lines may be address/city
-                  if (lines[j+1]) locationAddress = lines[j+1];
-                  if (lines[j+2]) locationCity = lines[j+2];
-                  fullLocation = [locationVenue, locationAddress, locationCity].filter(Boolean).join(', ');
-                }
-                if (lines[j].startsWith('GAZETTE CLASSIFICATION')) {
-                  categories = lines[j].replace('GAZETTE CLASSIFICATION', '').replace(/\t+/g, ' ').split(',').map(s => s.trim()).filter(Boolean);
-                }
-                if (lines[j].startsWith('ORGANIZATION/SPONSOR')) {
-                  host = lines[j].replace('ORGANIZATION/SPONSOR', '').replace(/\t+/g, ' ').trim();
-                }
-                if (lines[j].startsWith('DETAILS')) {
-                  // Description is everything after DETAILS until LINK
-                  const detailsText = lines.slice(j+1).join(' ');
-                  const linkIndex = detailsText.indexOf('LINK');
-                  if (linkIndex !== -1) {
-                    description = detailsText.substring(0, linkIndex).trim();
-                    // Extract the link after "LINK"
-                    const afterLink = detailsText.substring(linkIndex + 4).trim();
-                    // Find the actual URL (look for http or www)
-                    const urlMatch = afterLink.match(/(https?:\/\/[^\s]+|www\.[^\s]+)/);
-                    if (urlMatch) {
-                      eventLink = urlMatch[1];
-                      // If it starts with www, add https://
-                      if (eventLink.startsWith('www.')) {
-                        eventLink = 'https://' + eventLink;
-                      }
+          for (let i = 0; i < iframes.length; i++) {
+            try {
+              const frame = iframes[i];
+              const frameElement = await frame.contentFrame();
+              if (frameElement) {
+                console.log(`🔍 Checking iframe ${i + 1} for navigation...`);
+                
+                // First try to find the specific "Next Page" button
+                for (const selector of nextPageSelectors) {
+                  const frameButtons = await frameElement.$$(selector);
+                  if (frameButtons.length > 0) {
+                    // Check if this is actually a "Next Page" button by examining its properties
+                    const buttonInfo = await frameElement.evaluate((button) => {
+                      return {
+                        title: button.title || '',
+                        'aria-label': button.getAttribute('aria-label') || '',
+                        text: button.textContent.trim(),
+                        onclick: button.getAttribute('onclick') || '',
+                        href: button.href || '',
+                        id: button.id || '',
+                        className: button.className || ''
+                      };
+                    }, frameButtons[0]);
+                    
+                    console.log(`🔍 Button info: ${JSON.stringify(buttonInfo)}`);
+                    
+                    // Check if this looks like a "Next Page" button (not "Next Month")
+                    if (buttonInfo.title === 'Next Page' || 
+                        buttonInfo['aria-label'] === 'Next Page' ||
+                        buttonInfo.id.includes('lnk2NextPg')) {
+                      nextButton = frameButtons[0];
+                      targetFrame = frameElement;
+                      console.log(`➡️ Found "Next Page" button in iframe ${i + 1} with selector: ${selector}`);
+                      break;
+                    } else {
+                      console.log(`⚠️ Found button but it's not "Next Page": ${buttonInfo.title}`);
                     }
-                  } else {
-                    description = detailsText;
                   }
-                  break;
                 }
+                
+                if (nextButton) break;
               }
-              event = {
-                title,
-                dateTime,
-                location: fullLocation,
-                locationVenue,
-                locationAddress,
-                locationCity,
-                fullLocation,
-                description,
-                categories,
-                host,
-                image,
-                eventLink,
-                link,
-                id: link,
-                source: 'Harvard Gazette'
-              };
+            } catch (error) {
+              console.log(`⚠️ Could not access iframe ${i + 1}: ${error.message}`);
             }
           }
-          if (!event || !event.title) {
-            await detailPage.close();
-            continue;
+        }
+        
+        if (nextButton) {
+          console.log('➡️ Clicking next page button...');
+          
+          try {
+            // Get current date before clicking to detect if we're changing months
+            const currentDateBefore = await page.evaluate(() => {
+              const dateElement = document.querySelector('h1, h2, h3, .date, [class*="date"]');
+              return dateElement ? dateElement.textContent.trim() : '';
+            });
+            console.log(`📅 Current date before click: ${currentDateBefore}`);
+            
+            // Re-find the frame and button to avoid detachment issues
+            const iframes = await page.$$('iframe');
+            let targetFrame = null;
+            let nextButton = null;
+            
+            // Find the correct iframe and button
+            for (let i = 0; i < iframes.length; i++) {
+              try {
+                const frame = iframes[i];
+                const frameElement = await frame.contentFrame();
+                if (frameElement) {
+                  const frameButtons = await frameElement.$$('a[id="ctl04_ctl07_ctl00_lnk2NextPg"]');
+                  if (frameButtons.length > 0) {
+                    targetFrame = frameElement;
+                    nextButton = frameButtons[0];
+                    console.log(`🔄 Re-found "Next Page" button in iframe ${i + 1}`);
+                    break;
+                  }
+                }
+              } catch (error) {
+                console.log(`⚠️ Could not access iframe ${i + 1}: ${error.message}`);
+              }
+            }
+            
+            if (targetFrame && nextButton) {
+              console.log('🔄 Clicking button inside iframe...');
+              
+              // Scroll the button into view before clicking
+              await targetFrame.evaluate((button) => {
+                button.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }, nextButton);
+              
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              
+              // Try to execute the onclick JavaScript directly if it exists
+              const onclick = await targetFrame.evaluate((button) => button.getAttribute('onclick'), nextButton);
+              if (onclick && onclick.includes('Nav(')) {
+                console.log('🔄 Executing Nav() function directly in iframe...');
+                try {
+                  await targetFrame.evaluate((onclickCode) => {
+                    eval(onclickCode);
+                  }, onclick);
+                  console.log('✅ Nav() function executed successfully in iframe');
+                } catch (error) {
+                  console.log('⚠️ Failed to execute Nav() function in iframe, trying regular click...');
+                  await nextButton.click();
+                }
+              } else {
+                // Click the button normally in iframe
+                await nextButton.click();
+              }
+            } else {
+              console.log('⚠️ Could not re-find the button, trying direct Nav execution...');
+              // Try to execute Nav function directly
+              await page.evaluate(() => {
+                if (typeof Nav === 'function') {
+                  // Try to navigate to next day
+                  const today = new Date();
+                  const tomorrow = new Date(today);
+                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  const nextDate = tomorrow.getFullYear().toString() + 
+                                 (tomorrow.getMonth() + 1).toString().padStart(2, '0') + 
+                                 tomorrow.getDate().toString().padStart(2, '0');
+                  Nav(`date=${nextDate}`);
+                }
+              });
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for new content to load
+            
+            // Scroll to bottom to ensure all content is loaded
+            console.log('📜 Scrolling to bottom to load all content...');
+            await page.evaluate(() => {
+              window.scrollTo(0, document.body.scrollHeight);
+            });
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Scroll back to top
+            await page.evaluate(() => {
+              window.scrollTo(0, 0);
+            });
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Check if the date changed to detect if we clicked "Next Month" instead of "Next Page"
+            const currentDateAfter = await page.evaluate(() => {
+              const dateElement = document.querySelector('h1, h2, h3, .date, [class*="date"]');
+              return dateElement ? dateElement.textContent.trim() : '';
+            });
+            console.log(`📅 Current date after click: ${currentDateAfter}`);
+            
+            // If the month changed, we clicked the wrong button
+            if (currentDateBefore && currentDateAfter && 
+                currentDateBefore !== currentDateAfter && 
+                (currentDateBefore.includes('July') && currentDateAfter.includes('August') ||
+                 currentDateBefore.includes('August') && currentDateAfter.includes('September'))) {
+              console.log('⚠️ WARNING: Clicked "Next Month" button instead of "Next Page"!');
+              console.log('🔄 Looking for the correct "Next Page" button...');
+              // We need to find the correct "Next Page" button
+              return false; // Signal that we need to find the correct button
+            }
+          } catch (error) {
+            console.log(`❌ Error clicking next page button: ${error.message}`);
+            return false; // Signal that we need to try a different approach
           }
+          
+          // After clicking next page, call the XML scraper to get events for this page
+          console.log('📡 Calling XML scraper for current page...');
+          try {
+            const { execSync } = require('child_process');
+            execSync('node ../events/parse-harvard-events.js', { 
+              cwd: path.join(__dirname, '../scraping'),
+              stdio: 'pipe'
+            });
+            console.log('✅ XML scraper completed for current page');
+            
+            // Load the updated events to see the count
+            try {
+              const updatedEvents = JSON.parse(fs.readFileSync(path.join(__dirname, '../events/parsed-harvard-events.json'), 'utf8'));
+              console.log(`📊 Updated events count: ${updatedEvents.length}`);
+            } catch (error) {
+              console.log('⚠️ Could not read updated events file:', error.message);
+            }
+          } catch (error) {
+            console.log('⚠️ XML scraper failed for current page:', error.message);
+          }
+          
+          pageNumber++;
+        } else {
+          console.log('❌ No next page button found, stopping pagination');
+          break;
         }
-        
-        if (!event || !event.title) {
-          await detailPage.close();
-          continue;
-        }
-        
-        // Add link and id
-        event.link = link;
-        event.id = link.split('eventid%3d').pop()?.split('&')[0] || `gazette-${i}`;
-        event.source = "Harvard Gazette"; // Add source field
-        
-        events.push(event);
-        
-        // Close the detail page
-        await detailPage.close();
-        
-      } catch (err) {
-        console.error('❌ Error scraping event detail:', link, err.message);
-        // Only close detailPage if it exists
-        if (typeof detailPage !== 'undefined' && detailPage) {
-          try { await detailPage.close(); } catch (e) {}
-        }
-        // Skip to next event on error
-        continue;
+      } catch (error) {
+        console.log('❌ Error during pagination:', error.message);
+        break;
       }
     }
-
-    // Save parsed events
-    const outputPath = path.join(__dirname, '../events/parsed-harvard-gazette.json');
-    fs.writeFileSync(outputPath, JSON.stringify(events, null, 2));
-    console.log('💾 Saved parsed events to:', outputPath);
-    return events;
+    
+    console.log('✅ Pagination completed successfully!');
+    console.log('📊 All events have been collected by the XML scraper');
+    
+    return true;
     
   } catch (error) {
-    console.error('❌ Error scraping Harvard Gazette:', error.message);
-    return null;
+    console.error('❌ Error during scraping:', error);
+    throw error;
   } finally {
-    if (browser) {
-      await browser.close();
-    }
+    await browser.close();
+    console.log('🔚 Browser closed');
   }
 }
 
-// Run the scraper if called directly
-if (require.main === module) {
-  scrapeHarvardGazette()
-    .then(events => {
-      if (events) {
-        console.log(`✅ Successfully scraped ${events.length} Harvard Gazette events`);
-      } else {
-        console.log('❌ Failed to scrape Harvard Gazette events');
-        process.exit(1);
-      }
-    })
-    .catch(error => {
-      console.error('❌ Error running Harvard Gazette scraper:', error);
-      process.exit(1);
-    });
-}
-
-module.exports = { scrapeHarvardGazette }; 
+// Run the scraper
+scrapeHarvardGazette()
+  .then(success => {
+    console.log(`✅ Harvard Gazette pagination completed successfully!`);
+    process.exit(0);
+  })
+  .catch(error => {
+    console.error('❌ Harvard Gazette pagination failed:', error);
+    process.exit(1);
+  });
